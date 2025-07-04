@@ -1,0 +1,450 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Adelbert Steiner">Adelbert Steiner</option>
+                                
+                                    <option value="Delivery Moogle">Delivery Moogle</option>
+                                
+                                    <option value="Dragoon's Lance">Dragoon's Lance</option>
+                                
+                                    <option value="Paladin's Arms">Paladin's Arms</option>
+                                
+                                    <option value="Restoration Magic">Restoration Magic</option>
+                                
+                                    <option value="Slash of Light">Slash of Light</option>
+                                
+                                    <option value="White Auracite">White Auracite</option>
+                                
+                                    <option value="White Mage's Staff">White Mage's Staff</option>
+                                
+                                    <option value="Dark Knight's Greatsword">Dark Knight's Greatsword</option>
+                                
+                                    <option value="Resentful Revelation">Resentful Revelation</option>
+                                
+                                    <option value="Battle Menu">Battle Menu</option>
+                                
+                                    <option value="Ambrosia Whiteheart">Ambrosia Whiteheart</option>
+                                
+                                    <option value="Zack Fair">Zack Fair</option>
+                                
+                                    <option value="Vayne's Treachery">Vayne's Treachery</option>
+                                
+                                    <option value="Ashe, Princess of Dalmasca">Ashe, Princess of Dalmasca</option>
+                                
+                                    <option value="G'raha Tia">G'raha Tia</option>
+                                
+                                    <option value="Judge Magister Gabranth">Judge Magister Gabranth</option>
+                                
+                                    <option value="Weapons Vendor">Weapons Vendor</option>
+                                
+                                    <option value="Sidequest: Hunt the Mark">Sidequest: Hunt the Mark</option>
+                                
+                                    <option value="Rufus Shinra">Rufus Shinra</option>
+                                
+                                    <option value="The Crystal's Chosen">The Crystal's Chosen</option>
+                                
+                                    <option value="Cornered by Black Mages">Cornered by Black Mages</option>
+                                
+                                    <option value="Malboro">Malboro</option>
+                                
+                                    <option value="Gaelicat">Gaelicat</option>
+                                
+                                    <option value="Magitek Infantry">Magitek Infantry</option>
+                                
+                                    <option value="You're Not Alone">You're Not Alone</option>
+                                
+                                    <option value="Ahriman">Ahriman</option>
+                                
+                                    <option value="Overkill">Overkill</option>
+                                
+                                    <option value="Undercity Dire Rat">Undercity Dire Rat</option>
+                                
+                                    <option value="Magitek Armor">Magitek Armor</option>
+                                
+                                    <option value="Al Bhed Salvagers">Al Bhed Salvagers</option>
+                                
+                                    <option value="Fate of the Sun-Cryst">Fate of the Sun-Cryst</option>
+                                
+                                    <option value="Black Mage's Rod">Black Mage's Rod</option>
+                                
+                                    <option value="Circle of Power">Circle of Power</option>
+                                
+                                    <option value="Tonberry">Tonberry</option>
+                                
+                                    <option value="Summon: Anima">Summon: Anima</option>
+                                
+                                    <option value="Hecteyes">Hecteyes</option>
+                                
+                                    <option value="The Final Days">The Final Days</option>
+                                
+                                    <option value="Namazu Trader">Namazu Trader</option>
+                                
+                                    <option value="Phantom Train">Phantom Train</option>
+                                
+                                    <option value="Poison the Waters">Poison the Waters</option>
+                                
+                                    <option value="Sephiroth's Intervention">Sephiroth's Intervention</option>
+                                
+                                    <option value="Evil Reawakened">Evil Reawakened</option>
+                                
+                                    <option value="Shinra Reinforcements">Shinra Reinforcements</option>
+                                
+                                    <option value="Fight On!">Fight On!</option>
+                                
+                                    <option value="Reno and Rude">Reno and Rude</option>
+                                
+                                    <option value="Gaius van Baelsar">Gaius van Baelsar</option>
+                                
+                                    <option value="Vincent's Limit Break">Vincent's Limit Break</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Adelbert Steiner", "image": "img/Adelbert_Steiner.png", "label": "Adelbert Steiner", "shape": "image", "title": "GIHWR:58.0, avg_pick:3.87", "url": "WB_combo_network_Adelbert_Steiner"}, {"color": "#97c2fc", "id": "Delivery Moogle", "image": "img/Delivery_Moogle.png", "label": "Delivery Moogle", "shape": "image", "title": "GIHWR:59.6, avg_pick:4.34", "url": "WB_combo_network_Delivery_Moogle"}, {"color": "#97c2fc", "id": "Dragoon\u0027s Lance", "image": "img/Dragoon\u0027s_Lance.png", "label": "Dragoon\u0027s Lance", "shape": "image", "title": "GIHWR:61.4, avg_pick:2.97", "url": "WB_combo_network_Dragoon\u0027s_Lance"}, {"color": "#97c2fc", "id": "Paladin\u0027s Arms", "image": "img/Paladin\u0027s_Arms.png", "label": "Paladin\u0027s Arms", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.99", "url": "WB_combo_network_Paladin\u0027s_Arms"}, {"color": "#97c2fc", "id": "Restoration Magic", "image": "img/Restoration_Magic.png", "label": "Restoration Magic", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.9", "url": "WB_combo_network_Restoration_Magic"}, {"color": "#97c2fc", "id": "Slash of Light", "image": "img/Slash_of_Light.png", "label": "Slash of Light", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.12", "url": "WB_combo_network_Slash_of_Light"}, {"color": "#97c2fc", "id": "White Auracite", "image": "img/White_Auracite.png", "label": "White Auracite", "shape": "image", "title": "GIHWR:59.1, avg_pick:3.91", "url": "WB_combo_network_White_Auracite"}, {"color": "#97c2fc", "id": "White Mage\u0027s Staff", "image": "img/White_Mage\u0027s_Staff.png", "label": "White Mage\u0027s Staff", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.6", "url": "WB_combo_network_White_Mage\u0027s_Staff"}, {"color": "#97c2fc", "id": "Dark Knight\u0027s Greatsword", "image": "img/Dark_Knight\u0027s_Greatsword.png", "label": "Dark Knight\u0027s Greatsword", "shape": "image", "title": "GIHWR:55.9, avg_pick:6.36", "url": "WB_combo_network_Dark_Knight\u0027s_Greatsword"}, {"color": "#97c2fc", "id": "Resentful Revelation", "image": "img/Resentful_Revelation.png", "label": "Resentful Revelation", "shape": "image", "title": "GIHWR:57.9, avg_pick:7.57", "url": "WB_combo_network_Resentful_Revelation"}, {"color": "#97c2fc", "id": "Battle Menu", "image": "img/Battle_Menu.png", "label": "Battle Menu", "shape": "image", "title": "GIHWR:58.1, avg_pick:3.96", "url": "WB_combo_network_Battle_Menu"}, {"color": "#97c2fc", "id": "Ambrosia Whiteheart", "image": "img/Ambrosia_Whiteheart.png", "label": "Ambrosia Whiteheart", "shape": "image", "title": "GIHWR:56.3, avg_pick:4.36", "url": "WB_combo_network_Ambrosia_Whiteheart"}, {"color": "#97c2fc", "id": "Zack Fair", "image": "img/Zack_Fair.png", "label": "Zack Fair", "shape": "image", "title": "GIHWR:57.4, avg_pick:4.57", "url": "WB_combo_network_Zack_Fair"}, {"color": "#97c2fc", "id": "Vayne\u0027s Treachery", "image": "img/Vayne\u0027s_Treachery.png", "label": "Vayne\u0027s Treachery", "shape": "image", "title": "GIHWR:57.4, avg_pick:4.33", "url": "WB_combo_network_Vayne\u0027s_Treachery"}, {"color": "#97c2fc", "id": "Ashe, Princess of Dalmasca", "image": "img/Ashe,_Princess_of_Dalmasca.png", "label": "Ashe, Princess of Dalmasca", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.76", "url": "WB_combo_network_Ashe,_Princess_of_Dalmasca"}, {"color": "#97c2fc", "id": "G\u0027raha Tia", "image": "img/G\u0027raha_Tia.png", "label": "G\u0027raha Tia", "shape": "image", "title": "GIHWR:53.7, avg_pick:4.89", "url": "WB_combo_network_G\u0027raha_Tia"}, {"color": "#97c2fc", "id": "Judge Magister Gabranth", "image": "img/Judge_Magister_Gabranth.png", "label": "Judge Magister Gabranth", "shape": "image", "title": "GIHWR:56.0, avg_pick:7.35", "url": "WB_combo_network_Judge_Magister_Gabranth"}, {"color": "#97c2fc", "id": "Weapons Vendor", "image": "img/Weapons_Vendor.png", "label": "Weapons Vendor", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.67", "url": "WB_combo_network_Weapons_Vendor"}, {"color": "#97c2fc", "id": "Sidequest: Hunt the Mark", "image": "img/Sidequest_Hunt_the_Mark.png", "label": "Sidequest: Hunt the Mark", "shape": "image", "title": "GIHWR:60.0, avg_pick:3.02", "url": "WB_combo_network_Sidequest:_Hunt_the_Mark"}, {"color": "#97c2fc", "id": "Rufus Shinra", "image": "img/Rufus_Shinra.png", "label": "Rufus Shinra", "shape": "image", "title": "GIHWR:56.4, avg_pick:7.55", "url": "WB_combo_network_Rufus_Shinra"}, {"color": "#97c2fc", "id": "The Crystal\u0027s Chosen", "image": "img/The_Crystal\u0027s_Chosen.png", "label": "The Crystal\u0027s Chosen", "shape": "image", "title": "GIHWR:56.4, avg_pick:6.04", "url": "WB_combo_network_The_Crystal\u0027s_Chosen"}, {"color": "#97c2fc", "id": "Cornered by Black Mages", "image": "img/Cornered_by_Black_Mages.png", "label": "Cornered by Black Mages", "shape": "image", "title": "GIHWR:58.2, avg_pick:5.22", "url": "WB_combo_network_Cornered_by_Black_Mages"}, {"color": "#97c2fc", "id": "Malboro", "image": "img/Malboro.png", "label": "Malboro", "shape": "image", "title": "GIHWR:56.3, avg_pick:7.94", "url": "WB_combo_network_Malboro"}, {"color": "#97c2fc", "id": "Gaelicat", "image": "img/Gaelicat.png", "label": "Gaelicat", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.15", "url": "WB_combo_network_Gaelicat"}, {"color": "#97c2fc", "id": "Magitek Infantry", "image": "img/Magitek_Infantry.png", "label": "Magitek Infantry", "shape": "image", "title": "GIHWR:57.7, avg_pick:6.3", "url": "WB_combo_network_Magitek_Infantry"}, {"color": "#97c2fc", "id": "You\u0027re Not Alone", "image": "img/You\u0027re_Not_Alone.png", "label": "You\u0027re Not Alone", "shape": "image", "title": "GIHWR:55.9, avg_pick:9.81", "url": "WB_combo_network_You\u0027re_Not_Alone"}, {"color": "#97c2fc", "id": "Ahriman", "image": "img/Ahriman.png", "label": "Ahriman", "shape": "image", "title": "GIHWR:54.8, avg_pick:7.61", "url": "WB_combo_network_Ahriman"}, {"color": "#97c2fc", "id": "Overkill", "image": "img/Overkill.png", "label": "Overkill", "shape": "image", "title": "GIHWR:59.0, avg_pick:2.53", "url": "WB_combo_network_Overkill"}, {"color": "#97c2fc", "id": "Undercity Dire Rat", "image": "img/Undercity_Dire_Rat.png", "label": "Undercity Dire Rat", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.67", "url": "WB_combo_network_Undercity_Dire_Rat"}, {"color": "#97c2fc", "id": "Magitek Armor", "image": "img/Magitek_Armor.png", "label": "Magitek Armor", "shape": "image", "title": "GIHWR:57.1, avg_pick:5.71", "url": "WB_combo_network_Magitek_Armor"}, {"color": "#97c2fc", "id": "Al Bhed Salvagers", "image": "img/Al_Bhed_Salvagers.png", "label": "Al Bhed Salvagers", "shape": "image", "title": "GIHWR:56.0, avg_pick:5.04", "url": "WB_combo_network_Al_Bhed_Salvagers"}, {"color": "#97c2fc", "id": "Fate of the Sun-Cryst", "image": "img/Fate_of_the_Sun-Cryst.png", "label": "Fate of the Sun-Cryst", "shape": "image", "title": "GIHWR:53.8, avg_pick:6.76", "url": "WB_combo_network_Fate_of_the_Sun-Cryst"}, {"color": "#97c2fc", "id": "Black Mage\u0027s Rod", "image": "img/Black_Mage\u0027s_Rod.png", "label": "Black Mage\u0027s Rod", "shape": "image", "title": "GIHWR:55.6, avg_pick:6.26", "url": "WB_combo_network_Black_Mage\u0027s_Rod"}, {"color": "#97c2fc", "id": "Circle of Power", "image": "img/Circle_of_Power.png", "label": "Circle of Power", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.56", "url": "WB_combo_network_Circle_of_Power"}, {"color": "#97c2fc", "id": "Tonberry", "image": "img/Tonberry.png", "label": "Tonberry", "shape": "image", "title": "GIHWR:55.2, avg_pick:6.63", "url": "WB_combo_network_Tonberry"}, {"color": "#97c2fc", "id": "Summon: Anima", "image": "img/Summon_Anima.png", "label": "Summon: Anima", "shape": "image", "title": "GIHWR:52.7, avg_pick:5.79", "url": "WB_combo_network_Summon:_Anima"}, {"color": "#97c2fc", "id": "Hecteyes", "image": "img/Hecteyes.png", "label": "Hecteyes", "shape": "image", "title": "GIHWR:56.2, avg_pick:6.93", "url": "WB_combo_network_Hecteyes"}, {"color": "#97c2fc", "id": "The Final Days", "image": "img/The_Final_Days.png", "label": "The Final Days", "shape": "image", "title": "GIHWR:56.4, avg_pick:5.34", "url": "WB_combo_network_The_Final_Days"}, {"color": "#97c2fc", "id": "Namazu Trader", "image": "img/Namazu_Trader.png", "label": "Namazu Trader", "shape": "image", "title": "GIHWR:54.5, avg_pick:9.54", "url": "WB_combo_network_Namazu_Trader"}, {"color": "#97c2fc", "id": "Phantom Train", "image": "img/Phantom_Train.png", "label": "Phantom Train", "shape": "image", "title": "GIHWR:54.7, avg_pick:8.68", "url": "WB_combo_network_Phantom_Train"}, {"color": "#97c2fc", "id": "Poison the Waters", "image": "img/Poison_the_Waters.png", "label": "Poison the Waters", "shape": "image", "title": "GIHWR:53.0, avg_pick:8.92", "url": "WB_combo_network_Poison_the_Waters"}, {"color": "#97c2fc", "id": "Sephiroth\u0027s Intervention", "image": "img/Sephiroth\u0027s_Intervention.png", "label": "Sephiroth\u0027s Intervention", "shape": "image", "title": "GIHWR:58.8, avg_pick:3.3", "url": "WB_combo_network_Sephiroth\u0027s_Intervention"}, {"color": "#97c2fc", "id": "Evil Reawakened", "image": "img/Evil_Reawakened.png", "label": "Evil Reawakened", "shape": "image", "title": "GIHWR:57.1, avg_pick:4.85", "url": "WB_combo_network_Evil_Reawakened"}, {"color": "#97c2fc", "id": "Shinra Reinforcements", "image": "img/Shinra_Reinforcements.png", "label": "Shinra Reinforcements", "shape": "image", "title": "GIHWR:57.1, avg_pick:8.94", "url": "WB_combo_network_Shinra_Reinforcements"}, {"color": "#97c2fc", "id": "Fight On!", "image": "img/Fight_On!.png", "label": "Fight On!", "shape": "image", "title": "GIHWR:54.4, avg_pick:8.96", "url": "WB_combo_network_Fight_On!"}, {"color": "#97c2fc", "id": "Reno and Rude", "image": "img/Reno_and_Rude.png", "label": "Reno and Rude", "shape": "image", "title": "GIHWR:53.7, avg_pick:6.07", "url": "WB_combo_network_Reno_and_Rude"}, {"color": "#97c2fc", "id": "Gaius van Baelsar", "image": "img/Gaius_van_Baelsar.png", "label": "Gaius van Baelsar", "shape": "image", "title": "GIHWR:54.8, avg_pick:5.46", "url": "WB_combo_network_Gaius_van_Baelsar"}, {"color": "#97c2fc", "id": "Vincent\u0027s Limit Break", "image": "img/Vincent\u0027s_Limit_Break.png", "label": "Vincent\u0027s Limit Break", "shape": "image", "title": "GIHWR:51.9, avg_pick:10.6", "url": "WB_combo_network_Vincent\u0027s_Limit_Break"}]);
+                  edges = new vis.DataSet([{"from": "Adelbert Steiner", "label": "6.0", "title": "combo_ct:2767, comboWR:64.8, combo+-:6.0, AB_AveWR:58.8", "to": "Delivery Moogle", "value": 6.0}, {"from": "Adelbert Steiner", "label": "8.29", "title": "combo_ct:2793, comboWR:67.99, combo+-:8.29, AB_AveWR:59.7", "to": "Dragoon\u0027s Lance", "value": 8.29}, {"from": "Adelbert Steiner", "label": "3.38", "title": "combo_ct:5491, comboWR:60.23, combo+-:3.38, AB_AveWR:56.85", "to": "Paladin\u0027s Arms", "value": 3.38}, {"from": "Adelbert Steiner", "label": "3.88", "title": "combo_ct:1336, comboWR:61.23, combo+-:3.88, AB_AveWR:57.35", "to": "Restoration Magic", "value": 3.88}, {"from": "Adelbert Steiner", "label": "3.31", "title": "combo_ct:4974, comboWR:60.41, combo+-:3.31, AB_AveWR:57.1", "to": "Slash of Light", "value": 3.31}, {"from": "Adelbert Steiner", "label": "3.37", "title": "combo_ct:5354, comboWR:61.92, combo+-:3.37, AB_AveWR:58.55", "to": "White Auracite", "value": 3.37}, {"from": "Adelbert Steiner", "label": "4.77", "title": "combo_ct:6377, comboWR:62.57, combo+-:4.77, AB_AveWR:57.8", "to": "White Mage\u0027s Staff", "value": 4.77}, {"from": "Adelbert Steiner", "label": "5.92", "title": "combo_ct:536, comboWR:62.87, combo+-:5.92, AB_AveWR:56.95", "to": "Dark Knight\u0027s Greatsword", "value": 5.92}, {"from": "Adelbert Steiner", "label": "3.14", "title": "combo_ct:532, comboWR:61.09, combo+-:3.14, AB_AveWR:57.95", "to": "Resentful Revelation", "value": 3.14}, {"from": "Delivery Moogle", "label": "3.65", "title": "combo_ct:2613, comboWR:62.5, combo+-:3.65, AB_AveWR:58.85", "to": "Battle Menu", "value": 3.65}, {"from": "Delivery Moogle", "label": "4.42", "title": "combo_ct:5611, comboWR:62.32, combo+-:4.42, AB_AveWR:57.9", "to": "Gaelicat", "value": 4.42}, {"from": "Delivery Moogle", "label": "3.36", "title": "combo_ct:5341, comboWR:62.01, combo+-:3.36, AB_AveWR:58.65", "to": "Magitek Infantry", "value": 3.36}, {"from": "Delivery Moogle", "label": "4.22", "title": "combo_ct:1496, comboWR:62.37, combo+-:4.22, AB_AveWR:58.15", "to": "Restoration Magic", "value": 4.22}, {"from": "Delivery Moogle", "label": "4.7", "title": "combo_ct:5227, comboWR:62.6, combo+-:4.7, AB_AveWR:57.9", "to": "Slash of Light", "value": 4.7}, {"from": "Delivery Moogle", "label": "3.79", "title": "combo_ct:6349, comboWR:63.14, combo+-:3.79, AB_AveWR:59.35", "to": "White Auracite", "value": 3.79}, {"from": "Delivery Moogle", "label": "3.31", "title": "combo_ct:6987, comboWR:61.91, combo+-:3.31, AB_AveWR:58.6", "to": "White Mage\u0027s Staff", "value": 3.31}, {"from": "Delivery Moogle", "label": "3.11", "title": "combo_ct:3107, comboWR:60.86, combo+-:3.11, AB_AveWR:57.75", "to": "You\u0027re Not Alone", "value": 3.11}, {"from": "Delivery Moogle", "label": "3.39", "title": "combo_ct:2312, comboWR:61.89, combo+-:3.39, AB_AveWR:58.5", "to": "Zack Fair", "value": 3.39}, {"from": "Delivery Moogle", "label": "4.21", "title": "combo_ct:868, comboWR:61.41, combo+-:4.21, AB_AveWR:57.2", "to": "Ahriman", "value": 4.21}, {"from": "Delivery Moogle", "label": "3.56", "title": "combo_ct:1031, comboWR:62.46, combo+-:3.56, AB_AveWR:58.9", "to": "Cornered by Black Mages", "value": 3.56}, {"from": "Delivery Moogle", "label": "5.06", "title": "combo_ct:519, comboWR:62.81, combo+-:5.06, AB_AveWR:57.75", "to": "Dark Knight\u0027s Greatsword", "value": 5.06}, {"from": "Delivery Moogle", "label": "4.61", "title": "combo_ct:568, comboWR:63.91, combo+-:4.61, AB_AveWR:59.3", "to": "Overkill", "value": 4.61}, {"from": "Delivery Moogle", "label": "5.29", "title": "combo_ct:840, comboWR:62.74, combo+-:5.29, AB_AveWR:57.45", "to": "Undercity Dire Rat", "value": 5.29}, {"from": "Delivery Moogle", "label": "3.52", "title": "combo_ct:1356, comboWR:62.02, combo+-:3.52, AB_AveWR:58.5", "to": "Vayne\u0027s Treachery", "value": 3.52}, {"from": "Delivery Moogle", "label": "3.53", "title": "combo_ct:1024, comboWR:61.33, combo+-:3.53, AB_AveWR:57.8", "to": "Judge Magister Gabranth", "value": 3.53}, {"from": "Dragoon\u0027s Lance", "label": "3.37", "title": "combo_ct:2499, comboWR:62.22, combo+-:3.37, AB_AveWR:58.85", "to": "Ambrosia Whiteheart", "value": 3.37}, {"from": "Dragoon\u0027s Lance", "label": "3.04", "title": "combo_ct:1774, comboWR:60.99, combo+-:3.04, AB_AveWR:57.95", "to": "Ashe, Princess of Dalmasca", "value": 3.04}, {"from": "Dragoon\u0027s Lance", "label": "4.4", "title": "combo_ct:5869, comboWR:63.2, combo+-:4.4, AB_AveWR:58.8", "to": "Gaelicat", "value": 4.4}, {"from": "Dragoon\u0027s Lance", "label": "3.7", "title": "combo_ct:2715, comboWR:62.95, combo+-:3.7, AB_AveWR:59.25", "to": "Magitek Armor", "value": 3.7}, {"from": "Dragoon\u0027s Lance", "label": "3.52", "title": "combo_ct:5167, comboWR:63.07, combo+-:3.52, AB_AveWR:59.55", "to": "Magitek Infantry", "value": 3.52}, {"from": "Dragoon\u0027s Lance", "label": "3.64", "title": "combo_ct:1434, comboWR:62.69, combo+-:3.64, AB_AveWR:59.05", "to": "Restoration Magic", "value": 3.64}, {"from": "Dragoon\u0027s Lance", "label": "5.71", "title": "combo_ct:5908, comboWR:64.51, combo+-:5.71, AB_AveWR:58.8", "to": "Slash of Light", "value": 5.71}, {"from": "Dragoon\u0027s Lance", "label": "3.62", "title": "combo_ct:5499, comboWR:61.97, combo+-:3.62, AB_AveWR:58.35", "to": "Weapons Vendor", "value": 3.62}, {"from": "Dragoon\u0027s Lance", "label": "4.42", "title": "combo_ct:6672, comboWR:64.67, combo+-:4.42, AB_AveWR:60.25", "to": "White Auracite", "value": 4.42}, {"from": "Dragoon\u0027s Lance", "label": "3.25", "title": "combo_ct:6746, comboWR:62.75, combo+-:3.25, AB_AveWR:59.5", "to": "White Mage\u0027s Staff", "value": 3.25}, {"from": "Dragoon\u0027s Lance", "label": "3.41", "title": "combo_ct:3653, comboWR:62.06, combo+-:3.41, AB_AveWR:58.65", "to": "You\u0027re Not Alone", "value": 3.41}, {"from": "Dragoon\u0027s Lance", "label": "4.02", "title": "combo_ct:2430, comboWR:63.42, combo+-:4.02, AB_AveWR:59.4", "to": "Zack Fair", "value": 4.02}, {"from": "Dragoon\u0027s Lance", "label": "3.94", "title": "combo_ct:621, comboWR:62.64, combo+-:3.94, AB_AveWR:58.7", "to": "Al Bhed Salvagers", "value": 3.94}, {"from": "Dragoon\u0027s Lance", "label": "3.36", "title": "combo_ct:1037, comboWR:63.16, combo+-:3.36, AB_AveWR:59.8", "to": "Cornered by Black Mages", "value": 3.36}, {"from": "Dragoon\u0027s Lance", "label": "4.37", "title": "combo_ct:764, comboWR:63.22, combo+-:4.37, AB_AveWR:58.85", "to": "Malboro", "value": 4.37}, {"from": "Dragoon\u0027s Lance", "label": "3.35", "title": "combo_ct:1412, comboWR:62.75, combo+-:3.35, AB_AveWR:59.4", "to": "Vayne\u0027s Treachery", "value": 3.35}, {"from": "Dragoon\u0027s Lance", "label": "5.35", "title": "combo_ct:1110, comboWR:64.05, combo+-:5.35, AB_AveWR:58.7", "to": "Judge Magister Gabranth", "value": 5.35}, {"from": "Dragoon\u0027s Lance", "label": "4.08", "title": "combo_ct:1059, comboWR:62.98, combo+-:4.08, AB_AveWR:58.9", "to": "Rufus Shinra", "value": 4.08}, {"from": "Paladin\u0027s Arms", "label": "3.35", "title": "combo_ct:555, comboWR:60.0, combo+-:3.35, AB_AveWR:56.65", "to": "Circle of Power", "value": 3.35}, {"from": "Paladin\u0027s Arms", "label": "4.28", "title": "combo_ct:673, comboWR:59.73, combo+-:4.28, AB_AveWR:55.45", "to": "Tonberry", "value": 4.28}, {"from": "Restoration Magic", "label": "3.11", "title": "combo_ct:809, comboWR:58.71, combo+-:3.11, AB_AveWR:55.6", "to": "Ashe, Princess of Dalmasca", "value": 3.11}, {"from": "Restoration Magic", "label": "3.04", "title": "combo_ct:2263, comboWR:59.04, combo+-:3.04, AB_AveWR:56.0", "to": "Weapons Vendor", "value": 3.04}, {"from": "Restoration Magic", "label": "4.46", "title": "combo_ct:3366, comboWR:62.36, combo+-:4.46, AB_AveWR:57.9", "to": "White Auracite", "value": 4.46}, {"from": "Restoration Magic", "label": "5.84", "title": "combo_ct:563, comboWR:61.99, combo+-:5.84, AB_AveWR:56.15", "to": "Black Mage\u0027s Rod", "value": 5.84}, {"from": "Restoration Magic", "label": "3.39", "title": "combo_ct:526, comboWR:60.84, combo+-:3.39, AB_AveWR:57.45", "to": "Cornered by Black Mages", "value": 3.39}, {"from": "Slash of Light", "label": "3.05", "title": "combo_ct:12735, comboWR:59.95, combo+-:3.05, AB_AveWR:56.9", "to": "White Mage\u0027s Staff", "value": 3.05}, {"from": "Slash of Light", "label": "3.36", "title": "combo_ct:711, comboWR:61.46, combo+-:3.36, AB_AveWR:58.1", "to": "Sidequest: Hunt the Mark", "value": 3.36}, {"from": "White Auracite", "label": "3.58", "title": "combo_ct:5398, comboWR:61.28, combo+-:3.58, AB_AveWR:57.7", "to": "Ambrosia Whiteheart", "value": 3.58}, {"from": "White Auracite", "label": "4.78", "title": "combo_ct:4510, comboWR:62.53, combo+-:4.78, AB_AveWR:57.75", "to": "The Crystal\u0027s Chosen", "value": 4.78}, {"from": "White Auracite", "label": "3.83", "title": "combo_ct:11964, comboWR:61.48, combo+-:3.83, AB_AveWR:57.65", "to": "Gaelicat", "value": 3.83}, {"from": "White Auracite", "label": "3.07", "title": "combo_ct:5781, comboWR:61.17, combo+-:3.07, AB_AveWR:58.1", "to": "Magitek Armor", "value": 3.07}, {"from": "White Auracite", "label": "3.29", "title": "combo_ct:14817, comboWR:61.64, combo+-:3.29, AB_AveWR:58.35", "to": "White Mage\u0027s Staff", "value": 3.29}, {"from": "White Auracite", "label": "3.02", "title": "combo_ct:818, comboWR:61.37, combo+-:3.02, AB_AveWR:58.35", "to": "Circle of Power", "value": 3.02}, {"from": "White Auracite", "label": "3.93", "title": "combo_ct:1146, comboWR:61.43, combo+-:3.93, AB_AveWR:57.5", "to": "Dark Knight\u0027s Greatsword", "value": 3.93}, {"from": "White Auracite", "label": "3.99", "title": "combo_ct:1882, comboWR:61.69, combo+-:3.99, AB_AveWR:57.7", "to": "Malboro", "value": 3.99}, {"from": "White Auracite", "label": "3.21", "title": "combo_ct:1729, comboWR:61.71, combo+-:3.21, AB_AveWR:58.5", "to": "Resentful Revelation", "value": 3.21}, {"from": "White Auracite", "label": "4.66", "title": "combo_ct:1288, comboWR:64.21, combo+-:4.66, AB_AveWR:59.55", "to": "Sidequest: Hunt the Mark", "value": 4.66}, {"from": "White Mage\u0027s Staff", "label": "3.92", "title": "combo_ct:1178, comboWR:62.22, combo+-:3.92, AB_AveWR:58.3", "to": "Overkill", "value": 3.92}, {"from": "White Mage\u0027s Staff", "label": "4.62", "title": "combo_ct:1200, comboWR:63.42, combo+-:4.62, AB_AveWR:58.8", "to": "Sidequest: Hunt the Mark", "value": 4.62}, {"from": "White Mage\u0027s Staff", "label": "3.24", "title": "combo_ct:608, comboWR:58.39, combo+-:3.24, AB_AveWR:55.15", "to": "Summon: Anima", "value": 3.24}, {"from": "Dark Knight\u0027s Greatsword", "label": "6.06", "title": "combo_ct:509, comboWR:63.06, combo+-:6.06, AB_AveWR:57.0", "to": "Battle Menu", "value": 6.06}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.64", "title": "combo_ct:851, comboWR:59.69, combo+-:3.64, AB_AveWR:56.05", "to": "Gaelicat", "value": 3.64}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.45", "title": "combo_ct:901, comboWR:59.05, combo+-:3.45, AB_AveWR:55.6", "to": "Weapons Vendor", "value": 3.45}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.54", "title": "combo_ct:535, comboWR:59.44, combo+-:3.54, AB_AveWR:55.9", "to": "You\u0027re Not Alone", "value": 3.54}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.5", "title": "combo_ct:1361, comboWR:60.25, combo+-:3.5, AB_AveWR:56.75", "to": "Circle of Power", "value": 3.5}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.1", "title": "combo_ct:3307, comboWR:60.15, combo+-:3.1, AB_AveWR:57.05", "to": "Cornered by Black Mages", "value": 3.1}, {"from": "Dark Knight\u0027s Greatsword", "label": "4.88", "title": "combo_ct:1423, comboWR:62.33, combo+-:4.88, AB_AveWR:57.45", "to": "Overkill", "value": 4.88}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.72", "title": "combo_ct:837, comboWR:59.02, combo+-:3.72, AB_AveWR:55.3", "to": "Phantom Train", "value": 3.72}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.4", "title": "combo_ct:3554, comboWR:60.75, combo+-:3.4, AB_AveWR:57.35", "to": "Sephiroth\u0027s Intervention", "value": 3.4}, {"from": "Dark Knight\u0027s Greatsword", "label": "3.09", "title": "combo_ct:3840, comboWR:59.74, combo+-:3.09, AB_AveWR:56.65", "to": "Vayne\u0027s Treachery", "value": 3.09}, {"from": "Dark Knight\u0027s Greatsword", "label": "4.9", "title": "combo_ct:986, comboWR:60.85, combo+-:4.9, AB_AveWR:55.95", "to": "Judge Magister Gabranth", "value": 4.9}, {"from": "Resentful Revelation", "label": "4.31", "title": "combo_ct:772, comboWR:62.31, combo+-:4.31, AB_AveWR:58.0", "to": "Battle Menu", "value": 4.31}, {"from": "Resentful Revelation", "label": "3.74", "title": "combo_ct:537, comboWR:60.89, combo+-:3.74, AB_AveWR:57.15", "to": "The Crystal\u0027s Chosen", "value": 3.74}, {"from": "Resentful Revelation", "label": "3.2", "title": "combo_ct:3649, comboWR:60.15, combo+-:3.2, AB_AveWR:56.95", "to": "Al Bhed Salvagers", "value": 3.2}, {"from": "Resentful Revelation", "label": "4.57", "title": "combo_ct:4944, comboWR:62.32, combo+-:4.57, AB_AveWR:57.75", "to": "Circle of Power", "value": 4.57}, {"from": "Resentful Revelation", "label": "3.49", "title": "combo_ct:12344, comboWR:61.54, combo+-:3.49, AB_AveWR:58.05", "to": "Cornered by Black Mages", "value": 3.49}, {"from": "Resentful Revelation", "label": "3.01", "title": "combo_ct:4647, comboWR:60.51, combo+-:3.01, AB_AveWR:57.5", "to": "Evil Reawakened", "value": 3.01}, {"from": "Resentful Revelation", "label": "3.87", "title": "combo_ct:11956, comboWR:60.92, combo+-:3.87, AB_AveWR:57.05", "to": "Hecteyes", "value": 3.87}, {"from": "Resentful Revelation", "label": "4.45", "title": "combo_ct:5409, comboWR:62.9, combo+-:4.45, AB_AveWR:58.45", "to": "Overkill", "value": 4.45}, {"from": "Resentful Revelation", "label": "3.47", "title": "combo_ct:12803, comboWR:61.82, combo+-:3.47, AB_AveWR:58.35", "to": "Sephiroth\u0027s Intervention", "value": 3.47}, {"from": "Resentful Revelation", "label": "4.96", "title": "combo_ct:6179, comboWR:63.91, combo+-:4.96, AB_AveWR:58.95", "to": "Sidequest: Hunt the Mark", "value": 4.96}, {"from": "Resentful Revelation", "label": "3.27", "title": "combo_ct:13226, comboWR:60.92, combo+-:3.27, AB_AveWR:57.65", "to": "Vayne\u0027s Treachery", "value": 3.27}, {"from": "Battle Menu", "label": "4.09", "title": "combo_ct:2116, comboWR:61.29, combo+-:4.09, AB_AveWR:57.2", "to": "Ambrosia Whiteheart", "value": 4.09}, {"from": "Battle Menu", "label": "3.16", "title": "combo_ct:4043, comboWR:59.86, combo+-:3.16, AB_AveWR:56.7", "to": "Weapons Vendor", "value": 3.16}, {"from": "Battle Menu", "label": "3.64", "title": "combo_ct:587, comboWR:62.69, combo+-:3.64, AB_AveWR:59.05", "to": "Sidequest: Hunt the Mark", "value": 3.64}, {"from": "Battle Menu", "label": "3.56", "title": "combo_ct:1023, comboWR:60.61, combo+-:3.56, AB_AveWR:57.05", "to": "Judge Magister Gabranth", "value": 3.56}, {"from": "Battle Menu", "label": "5.21", "title": "combo_ct:1015, comboWR:62.46, combo+-:5.21, AB_AveWR:57.25", "to": "Rufus Shinra", "value": 5.21}, {"from": "Ambrosia Whiteheart", "label": "3.32", "title": "combo_ct:1913, comboWR:60.17, combo+-:3.32, AB_AveWR:56.85", "to": "Zack Fair", "value": 3.32}, {"from": "Ambrosia Whiteheart", "label": "3.15", "title": "combo_ct:1195, comboWR:60.0, combo+-:3.15, AB_AveWR:56.85", "to": "Vayne\u0027s Treachery", "value": 3.15}, {"from": "Vayne\u0027s Treachery", "label": "3.3", "title": "combo_ct:1220, comboWR:58.85, combo+-:3.3, AB_AveWR:55.55", "to": "G\u0027raha Tia", "value": 3.3}, {"from": "Vayne\u0027s Treachery", "label": "5.64", "title": "combo_ct:5748, comboWR:63.14, combo+-:5.64, AB_AveWR:57.5", "to": "Circle of Power", "value": 5.64}, {"from": "Vayne\u0027s Treachery", "label": "3.12", "title": "combo_ct:13759, comboWR:60.92, combo+-:3.12, AB_AveWR:57.8", "to": "Cornered by Black Mages", "value": 3.12}, {"from": "Vayne\u0027s Treachery", "label": "4.57", "title": "combo_ct:4992, comboWR:61.82, combo+-:4.57, AB_AveWR:57.25", "to": "Evil Reawakened", "value": 4.57}, {"from": "Vayne\u0027s Treachery", "label": "3.99", "title": "combo_ct:4275, comboWR:60.89, combo+-:3.99, AB_AveWR:56.9", "to": "The Final Days", "value": 3.99}, {"from": "Vayne\u0027s Treachery", "label": "3.09", "title": "combo_ct:4595, comboWR:59.19, combo+-:3.09, AB_AveWR:56.1", "to": "Gaius van Baelsar", "value": 3.09}, {"from": "Vayne\u0027s Treachery", "label": "3.18", "title": "combo_ct:6632, comboWR:61.38, combo+-:3.18, AB_AveWR:58.2", "to": "Overkill", "value": 3.18}, {"from": "Vayne\u0027s Treachery", "label": "4.11", "title": "combo_ct:7438, comboWR:62.81, combo+-:4.11, AB_AveWR:58.7", "to": "Sidequest: Hunt the Mark", "value": 4.11}, {"from": "Vayne\u0027s Treachery", "label": "3.22", "title": "combo_ct:4143, comboWR:58.27, combo+-:3.22, AB_AveWR:55.05", "to": "Summon: Anima", "value": 3.22}, {"from": "Ashe, Princess of Dalmasca", "label": "4.21", "title": "combo_ct:1216, comboWR:58.31, combo+-:4.21, AB_AveWR:54.1", "to": "G\u0027raha Tia", "value": 4.21}, {"from": "Ashe, Princess of Dalmasca", "label": "6.05", "title": "combo_ct:540, comboWR:61.3, combo+-:6.05, AB_AveWR:55.25", "to": "Judge Magister Gabranth", "value": 6.05}, {"from": "G\u0027raha Tia", "label": "5.68", "title": "combo_ct:842, comboWR:60.33, combo+-:5.68, AB_AveWR:54.65", "to": "Black Mage\u0027s Rod", "value": 5.68}, {"from": "G\u0027raha Tia", "label": "4.26", "title": "combo_ct:987, comboWR:58.76, combo+-:4.26, AB_AveWR:54.5", "to": "Undercity Dire Rat", "value": 4.26}, {"from": "G\u0027raha Tia", "label": "5.11", "title": "combo_ct:999, comboWR:60.16, combo+-:5.11, AB_AveWR:55.05", "to": "Rufus Shinra", "value": 5.11}, {"from": "Judge Magister Gabranth", "label": "5.31", "title": "combo_ct:978, comboWR:61.86, combo+-:5.31, AB_AveWR:56.55", "to": "Magitek Armor", "value": 5.31}, {"from": "Judge Magister Gabranth", "label": "3.27", "title": "combo_ct:1407, comboWR:59.42, combo+-:3.27, AB_AveWR:56.15", "to": "Malboro", "value": 3.27}, {"from": "Judge Magister Gabranth", "label": "3.13", "title": "combo_ct:983, comboWR:60.63, combo+-:3.13, AB_AveWR:57.5", "to": "Overkill", "value": 3.13}, {"from": "Judge Magister Gabranth", "label": "5.43", "title": "combo_ct:923, comboWR:60.78, combo+-:5.43, AB_AveWR:55.35", "to": "Phantom Train", "value": 5.43}, {"from": "Judge Magister Gabranth", "label": "5.03", "title": "combo_ct:998, comboWR:63.03, combo+-:5.03, AB_AveWR:58.0", "to": "Sidequest: Hunt the Mark", "value": 5.03}, {"from": "Judge Magister Gabranth", "label": "3.43", "title": "combo_ct:725, comboWR:59.03, combo+-:3.43, AB_AveWR:55.6", "to": "Tonberry", "value": 3.43}, {"from": "Judge Magister Gabranth", "label": "3.38", "title": "combo_ct:1999, comboWR:59.58, combo+-:3.38, AB_AveWR:56.2", "to": "Rufus Shinra", "value": 3.38}, {"from": "Weapons Vendor", "label": "3.75", "title": "combo_ct:684, comboWR:61.4, combo+-:3.75, AB_AveWR:57.65", "to": "Sidequest: Hunt the Mark", "value": 3.75}, {"from": "Sidequest: Hunt the Mark", "label": "3.91", "title": "combo_ct:819, comboWR:60.81, combo+-:3.91, AB_AveWR:56.9", "to": "Fate of the Sun-Cryst", "value": 3.91}, {"from": "Sidequest: Hunt the Mark", "label": "3.49", "title": "combo_ct:742, comboWR:61.59, combo+-:3.49, AB_AveWR:58.1", "to": "Gaelicat", "value": 3.49}, {"from": "Sidequest: Hunt the Mark", "label": "4.6", "title": "combo_ct:2297, comboWR:62.6, combo+-:4.6, AB_AveWR:58.0", "to": "Al Bhed Salvagers", "value": 4.6}, {"from": "Sidequest: Hunt the Mark", "label": "4.51", "title": "combo_ct:2540, comboWR:63.31, combo+-:4.51, AB_AveWR:58.8", "to": "Circle of Power", "value": 4.51}, {"from": "Sidequest: Hunt the Mark", "label": "4.92", "title": "combo_ct:6265, comboWR:64.02, combo+-:4.92, AB_AveWR:59.1", "to": "Cornered by Black Mages", "value": 4.92}, {"from": "Sidequest: Hunt the Mark", "label": "3.04", "title": "combo_ct:2166, comboWR:61.59, combo+-:3.04, AB_AveWR:58.55", "to": "Evil Reawakened", "value": 3.04}, {"from": "Sidequest: Hunt the Mark", "label": "3.05", "title": "combo_ct:3801, comboWR:60.25, combo+-:3.05, AB_AveWR:57.2", "to": "Fight On!", "value": 3.05}, {"from": "Sidequest: Hunt the Mark", "label": "3.07", "title": "combo_ct:1947, comboWR:61.27, combo+-:3.07, AB_AveWR:58.2", "to": "The Final Days", "value": 3.07}, {"from": "Sidequest: Hunt the Mark", "label": "5.58", "title": "combo_ct:2034, comboWR:62.98, combo+-:5.58, AB_AveWR:57.4", "to": "Gaius van Baelsar", "value": 5.58}, {"from": "Sidequest: Hunt the Mark", "label": "4.82", "title": "combo_ct:6694, comboWR:62.92, combo+-:4.82, AB_AveWR:58.1", "to": "Hecteyes", "value": 4.82}, {"from": "Sidequest: Hunt the Mark", "label": "5.8", "title": "combo_ct:5609, comboWR:63.95, combo+-:5.8, AB_AveWR:58.15", "to": "Malboro", "value": 5.8}, {"from": "Sidequest: Hunt the Mark", "label": "5.39", "title": "combo_ct:3370, comboWR:62.64, combo+-:5.39, AB_AveWR:57.25", "to": "Namazu Trader", "value": 5.39}, {"from": "Sidequest: Hunt the Mark", "label": "3.03", "title": "combo_ct:2864, comboWR:62.53, combo+-:3.03, AB_AveWR:59.5", "to": "Overkill", "value": 3.03}, {"from": "Sidequest: Hunt the Mark", "label": "5.74", "title": "combo_ct:768, comboWR:62.24, combo+-:5.74, AB_AveWR:56.5", "to": "Poison the Waters", "value": 5.74}, {"from": "Sidequest: Hunt the Mark", "label": "3.06", "title": "combo_ct:1726, comboWR:59.91, combo+-:3.06, AB_AveWR:56.85", "to": "Reno and Rude", "value": 3.06}, {"from": "Sidequest: Hunt the Mark", "label": "4.83", "title": "combo_ct:6925, comboWR:64.23, combo+-:4.83, AB_AveWR:59.4", "to": "Sephiroth\u0027s Intervention", "value": 4.83}, {"from": "Sidequest: Hunt the Mark", "label": "3.41", "title": "combo_ct:4456, comboWR:61.96, combo+-:3.41, AB_AveWR:58.55", "to": "Shinra Reinforcements", "value": 3.41}, {"from": "Sidequest: Hunt the Mark", "label": "3.16", "title": "combo_ct:1682, comboWR:59.51, combo+-:3.16, AB_AveWR:56.35", "to": "Summon: Anima", "value": 3.16}, {"from": "Sidequest: Hunt the Mark", "label": "5.12", "title": "combo_ct:5541, comboWR:62.77, combo+-:5.12, AB_AveWR:57.65", "to": "Undercity Dire Rat", "value": 5.12}, {"from": "Sidequest: Hunt the Mark", "label": "3.83", "title": "combo_ct:1196, comboWR:59.78, combo+-:3.83, AB_AveWR:55.95", "to": "Vincent\u0027s Limit Break", "value": 3.83}, {"from": "Rufus Shinra", "label": "3.35", "title": "combo_ct:713, comboWR:59.75, combo+-:3.35, AB_AveWR:56.4", "to": "The Crystal\u0027s Chosen", "value": 3.35}, {"from": "Rufus Shinra", "label": "3.18", "title": "combo_ct:901, comboWR:59.93, combo+-:3.18, AB_AveWR:56.75", "to": "Magitek Armor", "value": 3.18}, {"from": "Rufus Shinra", "label": "4.72", "title": "combo_ct:1035, comboWR:60.87, combo+-:4.72, AB_AveWR:56.15", "to": "You\u0027re Not Alone", "value": 4.72}, {"from": "Rufus Shinra", "label": "4.4", "title": "combo_ct:711, comboWR:60.2, combo+-:4.4, AB_AveWR:55.8", "to": "Tonberry", "value": 4.4}, {"from": "The Crystal\u0027s Chosen", "label": "5.49", "title": "combo_ct:680, comboWR:62.79, combo+-:5.49, AB_AveWR:57.3", "to": "Cornered by Black Mages", "value": 5.49}, {"from": "The Crystal\u0027s Chosen", "label": "4.11", "title": "combo_ct:569, comboWR:60.46, combo+-:4.11, AB_AveWR:56.35", "to": "Malboro", "value": 4.11}, {"from": "Cornered by Black Mages", "label": "3.4", "title": "combo_ct:1276, comboWR:59.4, combo+-:3.4, AB_AveWR:56.0", "to": "Fate of the Sun-Cryst", "value": 3.4}, {"from": "Cornered by Black Mages", "label": "3.37", "title": "combo_ct:926, comboWR:61.02, combo+-:3.37, AB_AveWR:57.65", "to": "Magitek Armor", "value": 3.37}, {"from": "Cornered by Black Mages", "label": "4.66", "title": "combo_ct:6702, comboWR:62.56, combo+-:4.66, AB_AveWR:57.9", "to": "Circle of Power", "value": 4.66}, {"from": "Cornered by Black Mages", "label": "3.7", "title": "combo_ct:5490, comboWR:62.3, combo+-:3.7, AB_AveWR:58.6", "to": "Overkill", "value": 3.7}, {"from": "Cornered by Black Mages", "label": "3.02", "title": "combo_ct:12974, comboWR:61.52, combo+-:3.02, AB_AveWR:58.5", "to": "Sephiroth\u0027s Intervention", "value": 3.02}, {"from": "Malboro", "label": "5.46", "title": "combo_ct:4603, comboWR:62.16, combo+-:5.46, AB_AveWR:56.7", "to": "Evil Reawakened", "value": 5.46}, {"from": "Malboro", "label": "3.19", "title": "combo_ct:7149, comboWR:58.54, combo+-:3.19, AB_AveWR:55.35", "to": "Fight On!", "value": 3.19}, {"from": "Malboro", "label": "3.53", "title": "combo_ct:3432, comboWR:59.88, combo+-:3.53, AB_AveWR:56.35", "to": "The Final Days", "value": 3.53}, {"from": "Malboro", "label": "3.69", "title": "combo_ct:11274, comboWR:59.94, combo+-:3.69, AB_AveWR:56.25", "to": "Hecteyes", "value": 3.69}, {"from": "Malboro", "label": "3.36", "title": "combo_ct:4909, comboWR:61.01, combo+-:3.36, AB_AveWR:57.65", "to": "Overkill", "value": 3.36}, {"from": "Malboro", "label": "3.59", "title": "combo_ct:11859, comboWR:61.14, combo+-:3.59, AB_AveWR:57.55", "to": "Sephiroth\u0027s Intervention", "value": 3.59}, {"from": "Magitek Infantry", "label": "3.18", "title": "combo_ct:5907, comboWR:59.98, combo+-:3.18, AB_AveWR:56.8", "to": "You\u0027re Not Alone", "value": 3.18}, {"from": "You\u0027re Not Alone", "label": "3.47", "title": "combo_ct:976, comboWR:59.22, combo+-:3.47, AB_AveWR:55.75", "to": "Black Mage\u0027s Rod", "value": 3.47}, {"from": "You\u0027re Not Alone", "label": "4.33", "title": "combo_ct:944, comboWR:60.38, combo+-:4.33, AB_AveWR:56.05", "to": "Hecteyes", "value": 4.33}, {"from": "Ahriman", "label": "4.1", "title": "combo_ct:2826, comboWR:59.7, combo+-:4.1, AB_AveWR:55.6", "to": "The Final Days", "value": 4.1}, {"from": "Overkill", "label": "3.89", "title": "combo_ct:515, comboWR:61.94, combo+-:3.89, AB_AveWR:58.05", "to": "Magitek Armor", "value": 3.89}, {"from": "Overkill", "label": "3.1", "title": "combo_ct:2028, comboWR:60.6, combo+-:3.1, AB_AveWR:57.5", "to": "Al Bhed Salvagers", "value": 3.1}, {"from": "Overkill", "label": "3.35", "title": "combo_ct:2360, comboWR:61.65, combo+-:3.35, AB_AveWR:58.3", "to": "Circle of Power", "value": 3.35}, {"from": "Overkill", "label": "4.87", "title": "combo_ct:1896, comboWR:62.92, combo+-:4.87, AB_AveWR:58.05", "to": "Evil Reawakened", "value": 4.87}, {"from": "Overkill", "label": "3.63", "title": "combo_ct:3489, comboWR:60.33, combo+-:3.63, AB_AveWR:56.7", "to": "Fight On!", "value": 3.63}, {"from": "Overkill", "label": "4.47", "title": "combo_ct:5922, comboWR:62.07, combo+-:4.47, AB_AveWR:57.6", "to": "Hecteyes", "value": 4.47}, {"from": "Overkill", "label": "3.22", "title": "combo_ct:2873, comboWR:59.97, combo+-:3.22, AB_AveWR:56.75", "to": "Namazu Trader", "value": 3.22}, {"from": "Overkill", "label": "5.29", "title": "combo_ct:1710, comboWR:61.64, combo+-:5.29, AB_AveWR:56.35", "to": "Reno and Rude", "value": 5.29}, {"from": "Overkill", "label": "3.34", "title": "combo_ct:3802, comboWR:61.39, combo+-:3.34, AB_AveWR:58.05", "to": "Shinra Reinforcements", "value": 3.34}, {"from": "Undercity Dire Rat", "label": "3.15", "title": "combo_ct:3681, comboWR:59.6, combo+-:3.15, AB_AveWR:56.45", "to": "Circle of Power", "value": 3.15}, {"from": "Undercity Dire Rat", "label": "3.32", "title": "combo_ct:11485, comboWR:60.37, combo+-:3.32, AB_AveWR:57.05", "to": "Sephiroth\u0027s Intervention", "value": 3.32}, {"from": "Al Bhed Salvagers", "label": "4.08", "title": "combo_ct:1420, comboWR:60.28, combo+-:4.08, AB_AveWR:56.2", "to": "The Final Days", "value": 4.08}, {"from": "Al Bhed Salvagers", "label": "3.19", "title": "combo_ct:2375, comboWR:58.44, combo+-:3.19, AB_AveWR:55.25", "to": "Namazu Trader", "value": 3.19}, {"from": "Al Bhed Salvagers", "label": "3.38", "title": "combo_ct:1105, comboWR:58.73, combo+-:3.38, AB_AveWR:55.35", "to": "Phantom Train", "value": 3.38}, {"from": "Al Bhed Salvagers", "label": "4.55", "title": "combo_ct:1365, comboWR:58.9, combo+-:4.55, AB_AveWR:54.35", "to": "Summon: Anima", "value": 4.55}, {"from": "Black Mage\u0027s Rod", "label": "4.68", "title": "combo_ct:5669, comboWR:61.28, combo+-:4.68, AB_AveWR:56.6", "to": "Circle of Power", "value": 4.68}, {"from": "Circle of Power", "label": "3.32", "title": "combo_ct:4877, comboWR:60.22, combo+-:3.32, AB_AveWR:56.9", "to": "Hecteyes", "value": 3.32}, {"from": "Circle of Power", "label": "3.31", "title": "combo_ct:2003, comboWR:59.36, combo+-:3.31, AB_AveWR:56.05", "to": "Namazu Trader", "value": 3.31}, {"from": "Circle of Power", "label": "4.9", "title": "combo_ct:724, comboWR:61.05, combo+-:4.9, AB_AveWR:56.15", "to": "Phantom Train", "value": 4.9}, {"from": "Circle of Power", "label": "6.44", "title": "combo_ct:677, comboWR:61.74, combo+-:6.44, AB_AveWR:55.3", "to": "Poison the Waters", "value": 6.44}, {"from": "Circle of Power", "label": "3.75", "title": "combo_ct:5519, comboWR:61.95, combo+-:3.75, AB_AveWR:58.2", "to": "Sephiroth\u0027s Intervention", "value": 3.75}, {"from": "Tonberry", "label": "4.81", "title": "combo_ct:676, comboWR:59.76, combo+-:4.81, AB_AveWR:54.95", "to": "Phantom Train", "value": 4.81}, {"from": "Summon: Anima", "label": "3.21", "title": "combo_ct:1711, comboWR:56.81, combo+-:3.21, AB_AveWR:53.6", "to": "Namazu Trader", "value": 3.21}, {"from": "Summon: Anima", "label": "4.78", "title": "combo_ct:3628, comboWR:60.53, combo+-:4.78, AB_AveWR:55.75", "to": "Sephiroth\u0027s Intervention", "value": 4.78}, {"from": "Summon: Anima", "label": "3.46", "title": "combo_ct:2142, comboWR:58.36, combo+-:3.46, AB_AveWR:54.9", "to": "Shinra Reinforcements", "value": 3.46}, {"from": "Hecteyes", "label": "3.45", "title": "combo_ct:4363, comboWR:59.75, combo+-:3.45, AB_AveWR:56.3", "to": "The Final Days", "value": 3.45}, {"from": "Hecteyes", "label": "3.49", "title": "combo_ct:4370, comboWR:58.99, combo+-:3.49, AB_AveWR:55.5", "to": "Gaius van Baelsar", "value": 3.49}, {"from": "Hecteyes", "label": "3.7", "title": "combo_ct:13921, comboWR:61.2, combo+-:3.7, AB_AveWR:57.5", "to": "Sephiroth\u0027s Intervention", "value": 3.7}, {"from": "The Final Days", "label": "3.06", "title": "combo_ct:1791, comboWR:58.51, combo+-:3.06, AB_AveWR:55.45", "to": "Namazu Trader", "value": 3.06}, {"from": "The Final Days", "label": "3.9", "title": "combo_ct:1196, comboWR:58.95, combo+-:3.9, AB_AveWR:55.05", "to": "Reno and Rude", "value": 3.9}, {"from": "The Final Days", "label": "4.15", "title": "combo_ct:3903, comboWR:61.75, combo+-:4.15, AB_AveWR:57.6", "to": "Sephiroth\u0027s Intervention", "value": 4.15}, {"from": "The Final Days", "label": "4.04", "title": "combo_ct:3795, comboWR:60.79, combo+-:4.04, AB_AveWR:56.75", "to": "Shinra Reinforcements", "value": 4.04}, {"from": "Phantom Train", "label": "5.63", "title": "combo_ct:560, comboWR:58.93, combo+-:5.63, AB_AveWR:53.3", "to": "Vincent\u0027s Limit Break", "value": 5.63}, {"from": "Poison the Waters", "label": "3.78", "title": "combo_ct:1694, comboWR:59.68, combo+-:3.78, AB_AveWR:55.9", "to": "Sephiroth\u0027s Intervention", "value": 3.78}, {"from": "Sephiroth\u0027s Intervention", "label": "3.87", "title": "combo_ct:4814, comboWR:61.82, combo+-:3.87, AB_AveWR:57.95", "to": "Evil Reawakened", "value": 3.87}, {"from": "Sephiroth\u0027s Intervention", "label": "3.11", "title": "combo_ct:3708, comboWR:59.36, combo+-:3.11, AB_AveWR:56.25", "to": "Reno and Rude", "value": 3.11}, {"from": "Evil Reawakened", "label": "4.71", "title": "combo_ct:4286, comboWR:61.81, combo+-:4.71, AB_AveWR:57.1", "to": "Shinra Reinforcements", "value": 4.71}, {"from": "Shinra Reinforcements", "label": "3.41", "title": "combo_ct:7207, comboWR:59.16, combo+-:3.41, AB_AveWR:55.75", "to": "Fight On!", "value": 3.41}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,452 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Quistis Trepe">Quistis Trepe</option>
+                                
+                                    <option value="Dragoon's Wyvern">Dragoon's Wyvern</option>
+                                
+                                    <option value="Combat Tutorial">Combat Tutorial</option>
+                                
+                                    <option value="Dreams of Laguna">Dreams of Laguna</option>
+                                
+                                    <option value="Eject">Eject</option>
+                                
+                                    <option value="Ice Magic">Ice Magic</option>
+                                
+                                    <option value="Il Mheg Pixie">Il Mheg Pixie</option>
+                                
+                                    <option value="Magic Damper">Magic Damper</option>
+                                
+                                    <option value="Sahagin">Sahagin</option>
+                                
+                                    <option value="Scorpion Sentinel">Scorpion Sentinel</option>
+                                
+                                    <option value="Sidequest: Card Collection">Sidequest: Card Collection</option>
+                                
+                                    <option value="Sleep Magic">Sleep Magic</option>
+                                
+                                    <option value="Stuck in Summoner's Sanctum">Stuck in Summoner's Sanctum</option>
+                                
+                                    <option value="Swallowed by Leviathan">Swallowed by Leviathan</option>
+                                
+                                    <option value="Syncopate">Syncopate</option>
+                                
+                                    <option value="Travel the Overworld">Travel the Overworld</option>
+                                
+                                    <option value="Ultros, Obnoxious Octopus">Ultros, Obnoxious Octopus</option>
+                                
+                                    <option value="Chocobo Kick">Chocobo Kick</option>
+                                
+                                    <option value="Clash of the Eikons">Clash of the Eikons</option>
+                                
+                                    <option value="Coliseum Behemoth">Coliseum Behemoth</option>
+                                
+                                    <option value="Gran Pulse Ochu">Gran Pulse Ochu</option>
+                                
+                                    <option value="Rydia's Return">Rydia's Return</option>
+                                
+                                    <option value="Sazh's Chocobo">Sazh's Chocobo</option>
+                                
+                                    <option value="Summon: Fenrir">Summon: Fenrir</option>
+                                
+                                    <option value="Omega, Heartless Evolution">Omega, Heartless Evolution</option>
+                                
+                                    <option value="Summon: Shiva">Summon: Shiva</option>
+                                
+                                    <option value="Airship Crash">Airship Crash</option>
+                                
+                                    <option value="Vanille, Cheerful l'Cie">Vanille, Cheerful l'Cie</option>
+                                
+                                    <option value="Relm's Sketching">Relm's Sketching</option>
+                                
+                                    <option value="Reach the Horizon">Reach the Horizon</option>
+                                
+                                    <option value="Prishe's Wanderings">Prishe's Wanderings</option>
+                                
+                                    <option value="Ignis Scientia">Ignis Scientia</option>
+                                
+                                    <option value="Ice Flan">Ice Flan</option>
+                                
+                                    <option value="Blitzball Shot">Blitzball Shot</option>
+                                
+                                    <option value="Bard's Bow">Bard's Bow</option>
+                                
+                                    <option value="Town Greeter">Town Greeter</option>
+                                
+                                    <option value="The Prima Vista">The Prima Vista</option>
+                                
+                                    <option value="Qiqirn Merchant">Qiqirn Merchant</option>
+                                
+                                    <option value="Balamb T-Rexaur">Balamb T-Rexaur</option>
+                                
+                                    <option value="Gysahl Greens">Gysahl Greens</option>
+                                
+                                    <option value="Summon: Fat Chocobo">Summon: Fat Chocobo</option>
+                                
+                                    <option value="Retrieve the Esper">Retrieve the Esper</option>
+                                
+                                    <option value="Thief's Knife">Thief's Knife</option>
+                                
+                                    <option value="Goobbue Gardener">Goobbue Gardener</option>
+                                
+                                    <option value="Chocobo Racetrack">Chocobo Racetrack</option>
+                                
+                                    <option value="Commune with Beavers">Commune with Beavers</option>
+                                
+                                    <option value="Diamond Weapon">Diamond Weapon</option>
+                                
+                                    <option value="Torgal, A Fine Hound">Torgal, A Fine Hound</option>
+                                
+                                    <option value="Ride the Shoopuf">Ride the Shoopuf</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Quistis Trepe", "image": "img/Quistis_Trepe.png", "label": "Quistis Trepe", "shape": "image", "title": "GIHWR:55.9, avg_pick:4.65", "url": "UG_combo_network_Quistis_Trepe"}, {"color": "#97c2fc", "id": "Dragoon\u0027s Wyvern", "image": "img/Dragoon\u0027s_Wyvern.png", "label": "Dragoon\u0027s Wyvern", "shape": "image", "title": "GIHWR:58.7, avg_pick:5.09", "url": "UG_combo_network_Dragoon\u0027s_Wyvern"}, {"color": "#97c2fc", "id": "Combat Tutorial", "image": "img/Combat_Tutorial.png", "label": "Combat Tutorial", "shape": "image", "title": "GIHWR:58.9, avg_pick:6.33", "url": "UG_combo_network_Combat_Tutorial"}, {"color": "#97c2fc", "id": "Dreams of Laguna", "image": "img/Dreams_of_Laguna.png", "label": "Dreams of Laguna", "shape": "image", "title": "GIHWR:57.8, avg_pick:7.19", "url": "UG_combo_network_Dreams_of_Laguna"}, {"color": "#97c2fc", "id": "Eject", "image": "img/Eject.png", "label": "Eject", "shape": "image", "title": "GIHWR:59.0, avg_pick:4.46", "url": "UG_combo_network_Eject"}, {"color": "#97c2fc", "id": "Ice Magic", "image": "img/Ice_Magic.png", "label": "Ice Magic", "shape": "image", "title": "GIHWR:58.1, avg_pick:5.73", "url": "UG_combo_network_Ice_Magic"}, {"color": "#97c2fc", "id": "Il Mheg Pixie", "image": "img/Il_Mheg_Pixie.png", "label": "Il Mheg Pixie", "shape": "image", "title": "GIHWR:57.9, avg_pick:3.89", "url": "UG_combo_network_Il_Mheg_Pixie"}, {"color": "#97c2fc", "id": "Magic Damper", "image": "img/Magic_Damper.png", "label": "Magic Damper", "shape": "image", "title": "GIHWR:55.9, avg_pick:10.68", "url": "UG_combo_network_Magic_Damper"}, {"color": "#97c2fc", "id": "Sahagin", "image": "img/Sahagin.png", "label": "Sahagin", "shape": "image", "title": "GIHWR:57.9, avg_pick:6.78", "url": "UG_combo_network_Sahagin"}, {"color": "#97c2fc", "id": "Scorpion Sentinel", "image": "img/Scorpion_Sentinel.png", "label": "Scorpion Sentinel", "shape": "image", "title": "GIHWR:55.7, avg_pick:8.37", "url": "UG_combo_network_Scorpion_Sentinel"}, {"color": "#97c2fc", "id": "Sidequest: Card Collection", "image": "img/Sidequest_Card_Collection.png", "label": "Sidequest: Card Collection", "shape": "image", "title": "GIHWR:59.1, avg_pick:6.92", "url": "UG_combo_network_Sidequest:_Card_Collection"}, {"color": "#97c2fc", "id": "Sleep Magic", "image": "img/Sleep_Magic.png", "label": "Sleep Magic", "shape": "image", "title": "GIHWR:58.5, avg_pick:4.5", "url": "UG_combo_network_Sleep_Magic"}, {"color": "#97c2fc", "id": "Stuck in Summoner\u0027s Sanctum", "image": "img/Stuck_in_Summoner\u0027s_Sanctum.png", "label": "Stuck in Summoner\u0027s Sanctum", "shape": "image", "title": "GIHWR:55.2, avg_pick:6.28", "url": "UG_combo_network_Stuck_in_Summoner\u0027s_Sanctum"}, {"color": "#97c2fc", "id": "Swallowed by Leviathan", "image": "img/Swallowed_by_Leviathan.png", "label": "Swallowed by Leviathan", "shape": "image", "title": "GIHWR:59.1, avg_pick:5.78", "url": "UG_combo_network_Swallowed_by_Leviathan"}, {"color": "#97c2fc", "id": "Syncopate", "image": "img/Syncopate.png", "label": "Syncopate", "shape": "image", "title": "GIHWR:57.3, avg_pick:8.43", "url": "UG_combo_network_Syncopate"}, {"color": "#97c2fc", "id": "Travel the Overworld", "image": "img/Travel_the_Overworld.png", "label": "Travel the Overworld", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.97", "url": "UG_combo_network_Travel_the_Overworld"}, {"color": "#97c2fc", "id": "Ultros, Obnoxious Octopus", "image": "img/Ultros,_Obnoxious_Octopus.png", "label": "Ultros, Obnoxious Octopus", "shape": "image", "title": "GIHWR:58.4, avg_pick:4.51", "url": "UG_combo_network_Ultros,_Obnoxious_Octopus"}, {"color": "#97c2fc", "id": "Chocobo Kick", "image": "img/Chocobo_Kick.png", "label": "Chocobo Kick", "shape": "image", "title": "GIHWR:57.3, avg_pick:5.35", "url": "UG_combo_network_Chocobo_Kick"}, {"color": "#97c2fc", "id": "Clash of the Eikons", "image": "img/Clash_of_the_Eikons.png", "label": "Clash of the Eikons", "shape": "image", "title": "GIHWR:53.7, avg_pick:6.96", "url": "UG_combo_network_Clash_of_the_Eikons"}, {"color": "#97c2fc", "id": "Coliseum Behemoth", "image": "img/Coliseum_Behemoth.png", "label": "Coliseum Behemoth", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.81", "url": "UG_combo_network_Coliseum_Behemoth"}, {"color": "#97c2fc", "id": "Gran Pulse Ochu", "image": "img/Gran_Pulse_Ochu.png", "label": "Gran Pulse Ochu", "shape": "image", "title": "GIHWR:55.2, avg_pick:8.66", "url": "UG_combo_network_Gran_Pulse_Ochu"}, {"color": "#97c2fc", "id": "Rydia\u0027s Return", "image": "img/Rydia\u0027s_Return.png", "label": "Rydia\u0027s Return", "shape": "image", "title": "GIHWR:53.1, avg_pick:8.78", "url": "UG_combo_network_Rydia\u0027s_Return"}, {"color": "#97c2fc", "id": "Sazh\u0027s Chocobo", "image": "img/Sazh\u0027s_Chocobo.png", "label": "Sazh\u0027s Chocobo", "shape": "image", "title": "GIHWR:59.8, avg_pick:3.09", "url": "UG_combo_network_Sazh\u0027s_Chocobo"}, {"color": "#97c2fc", "id": "Summon: Fenrir", "image": "img/Summon_Fenrir.png", "label": "Summon: Fenrir", "shape": "image", "title": "GIHWR:60.7, avg_pick:2.67", "url": "UG_combo_network_Summon:_Fenrir"}, {"color": "#97c2fc", "id": "Omega, Heartless Evolution", "image": "img/Omega,_Heartless_Evolution.png", "label": "Omega, Heartless Evolution", "shape": "image", "title": "GIHWR:58.0, avg_pick:6.68", "url": "UG_combo_network_Omega,_Heartless_Evolution"}, {"color": "#97c2fc", "id": "Summon: Shiva", "image": "img/Summon_Shiva.png", "label": "Summon: Shiva", "shape": "image", "title": "GIHWR:56.6, avg_pick:4.38", "url": "UG_combo_network_Summon:_Shiva"}, {"color": "#97c2fc", "id": "Airship Crash", "image": "img/Airship_Crash.png", "label": "Airship Crash", "shape": "image", "title": "GIHWR:52.9, avg_pick:10.86", "url": "UG_combo_network_Airship_Crash"}, {"color": "#97c2fc", "id": "Vanille, Cheerful l\u0027Cie", "image": "img/Vanille,_Cheerful_l\u0027Cie.png", "label": "Vanille, Cheerful l\u0027Cie", "shape": "image", "title": "GIHWR:58.4, avg_pick:4.01", "url": "UG_combo_network_Vanille,_Cheerful_l\u0027Cie"}, {"color": "#97c2fc", "id": "Relm\u0027s Sketching", "image": "img/Relm\u0027s_Sketching.png", "label": "Relm\u0027s Sketching", "shape": "image", "title": "GIHWR:55.6, avg_pick:5.33", "url": "UG_combo_network_Relm\u0027s_Sketching"}, {"color": "#97c2fc", "id": "Reach the Horizon", "image": "img/Reach_the_Horizon.png", "label": "Reach the Horizon", "shape": "image", "title": "GIHWR:52.9, avg_pick:6.97", "url": "UG_combo_network_Reach_the_Horizon"}, {"color": "#97c2fc", "id": "Prishe\u0027s Wanderings", "image": "img/Prishe\u0027s_Wanderings.png", "label": "Prishe\u0027s Wanderings", "shape": "image", "title": "GIHWR:54.0, avg_pick:7.79", "url": "UG_combo_network_Prishe\u0027s_Wanderings"}, {"color": "#97c2fc", "id": "Ignis Scientia", "image": "img/Ignis_Scientia.png", "label": "Ignis Scientia", "shape": "image", "title": "GIHWR:58.4, avg_pick:5.72", "url": "UG_combo_network_Ignis_Scientia"}, {"color": "#97c2fc", "id": "Ice Flan", "image": "img/Ice_Flan.png", "label": "Ice Flan", "shape": "image", "title": "GIHWR:53.5, avg_pick:9.64", "url": "UG_combo_network_Ice_Flan"}, {"color": "#97c2fc", "id": "Blitzball Shot", "image": "img/Blitzball_Shot.png", "label": "Blitzball Shot", "shape": "image", "title": "GIHWR:53.4, avg_pick:11.01", "url": "UG_combo_network_Blitzball_Shot"}, {"color": "#97c2fc", "id": "Bard\u0027s Bow", "image": "img/Bard\u0027s_Bow.png", "label": "Bard\u0027s Bow", "shape": "image", "title": "GIHWR:55.1, avg_pick:8.7", "url": "UG_combo_network_Bard\u0027s_Bow"}, {"color": "#97c2fc", "id": "Town Greeter", "image": "img/Town_Greeter.png", "label": "Town Greeter", "shape": "image", "title": "GIHWR:58.4, avg_pick:6.5", "url": "UG_combo_network_Town_Greeter"}, {"color": "#97c2fc", "id": "The Prima Vista", "image": "img/The_Prima_Vista.png", "label": "The Prima Vista", "shape": "image", "title": "GIHWR:51.7, avg_pick:10.04", "url": "UG_combo_network_The_Prima_Vista"}, {"color": "#97c2fc", "id": "Qiqirn Merchant", "image": "img/Qiqirn_Merchant.png", "label": "Qiqirn Merchant", "shape": "image", "title": "GIHWR:52.6, avg_pick:10.51", "url": "UG_combo_network_Qiqirn_Merchant"}, {"color": "#97c2fc", "id": "Balamb T-Rexaur", "image": "img/Balamb_T-Rexaur.png", "label": "Balamb T-Rexaur", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.41", "url": "UG_combo_network_Balamb_T-Rexaur"}, {"color": "#97c2fc", "id": "Gysahl Greens", "image": "img/Gysahl_Greens.png", "label": "Gysahl Greens", "shape": "image", "title": "GIHWR:54.1, avg_pick:7.96", "url": "UG_combo_network_Gysahl_Greens"}, {"color": "#97c2fc", "id": "Summon: Fat Chocobo", "image": "img/Summon_Fat_Chocobo.png", "label": "Summon: Fat Chocobo", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.47", "url": "UG_combo_network_Summon:_Fat_Chocobo"}, {"color": "#97c2fc", "id": "Retrieve the Esper", "image": "img/Retrieve_the_Esper.png", "label": "Retrieve the Esper", "shape": "image", "title": "GIHWR:55.5, avg_pick:7.39", "url": "UG_combo_network_Retrieve_the_Esper"}, {"color": "#97c2fc", "id": "Thief\u0027s Knife", "image": "img/Thief\u0027s_Knife.png", "label": "Thief\u0027s Knife", "shape": "image", "title": "GIHWR:52.8, avg_pick:5.89", "url": "UG_combo_network_Thief\u0027s_Knife"}, {"color": "#97c2fc", "id": "Goobbue Gardener", "image": "img/Goobbue_Gardener.png", "label": "Goobbue Gardener", "shape": "image", "title": "GIHWR:55.0, avg_pick:6.53", "url": "UG_combo_network_Goobbue_Gardener"}, {"color": "#97c2fc", "id": "Chocobo Racetrack", "image": "img/Chocobo_Racetrack.png", "label": "Chocobo Racetrack", "shape": "image", "title": "GIHWR:51.7, avg_pick:6.02", "url": "UG_combo_network_Chocobo_Racetrack"}, {"color": "#97c2fc", "id": "Commune with Beavers", "image": "img/Commune_with_Beavers.png", "label": "Commune with Beavers", "shape": "image", "title": "GIHWR:53.7, avg_pick:11.01", "url": "UG_combo_network_Commune_with_Beavers"}, {"color": "#97c2fc", "id": "Diamond Weapon", "image": "img/Diamond_Weapon.png", "label": "Diamond Weapon", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.29", "url": "UG_combo_network_Diamond_Weapon"}, {"color": "#97c2fc", "id": "Torgal, A Fine Hound", "image": "img/Torgal,_A_Fine_Hound.png", "label": "Torgal, A Fine Hound", "shape": "image", "title": "GIHWR:58.4, avg_pick:3.19", "url": "UG_combo_network_Torgal,_A_Fine_Hound"}, {"color": "#97c2fc", "id": "Ride the Shoopuf", "image": "img/Ride_the_Shoopuf.png", "label": "Ride the Shoopuf", "shape": "image", "title": "GIHWR:54.9, avg_pick:5.31", "url": "UG_combo_network_Ride_the_Shoopuf"}]);
+                  edges = new vis.DataSet([{"from": "Quistis Trepe", "label": "3.81", "title": "combo_ct:7097, comboWR:61.21, combo+-:3.81, AB_AveWR:57.4", "to": "Combat Tutorial", "value": 7097}, {"from": "Quistis Trepe", "label": "4.63", "title": "combo_ct:4001, comboWR:62.08, combo+-:4.63, AB_AveWR:57.45", "to": "Eject", "value": 4001}, {"from": "Quistis Trepe", "label": "3.43", "title": "combo_ct:2624, comboWR:59.18, combo+-:3.43, AB_AveWR:55.75", "to": "Relm\u0027s Sketching", "value": 2624}, {"from": "Quistis Trepe", "label": "4.0", "title": "combo_ct:2488, comboWR:61.5, combo+-:4.0, AB_AveWR:57.5", "to": "Sidequest: Card Collection", "value": 2488}, {"from": "Quistis Trepe", "label": "3.92", "title": "combo_ct:3097, comboWR:61.12, combo+-:3.92, AB_AveWR:57.2", "to": "Sleep Magic", "value": 3097}, {"from": "Quistis Trepe", "label": "4.24", "title": "combo_ct:3403, comboWR:61.74, combo+-:4.24, AB_AveWR:57.5", "to": "Swallowed by Leviathan", "value": 3403}, {"from": "Quistis Trepe", "label": "3.11", "title": "combo_ct:5525, comboWR:59.71, combo+-:3.11, AB_AveWR:56.6", "to": "Syncopate", "value": 5525}, {"from": "Quistis Trepe", "label": "3.94", "title": "combo_ct:1919, comboWR:60.24, combo+-:3.94, AB_AveWR:56.3", "to": "Travel the Overworld", "value": 1919}, {"from": "Quistis Trepe", "label": "3.95", "title": "combo_ct:1431, comboWR:59.75, combo+-:3.95, AB_AveWR:55.8", "to": "Balamb T-Rexaur", "value": 1431}, {"from": "Quistis Trepe", "label": "6.27", "title": "combo_ct:1449, comboWR:62.87, combo+-:6.27, AB_AveWR:56.6", "to": "Chocobo Kick", "value": 1449}, {"from": "Quistis Trepe", "label": "5.03", "title": "combo_ct:610, comboWR:62.13, combo+-:5.03, AB_AveWR:57.1", "to": "Coliseum Behemoth", "value": 610}, {"from": "Quistis Trepe", "label": "5.26", "title": "combo_ct:911, comboWR:60.81, combo+-:5.26, AB_AveWR:55.55", "to": "Gran Pulse Ochu", "value": 911}, {"from": "Quistis Trepe", "label": "3.94", "title": "combo_ct:811, comboWR:58.94, combo+-:3.94, AB_AveWR:55.0", "to": "Gysahl Greens", "value": 811}, {"from": "Quistis Trepe", "label": "3.88", "title": "combo_ct:1110, comboWR:58.83, combo+-:3.88, AB_AveWR:54.95", "to": "Prishe\u0027s Wanderings", "value": 1110}, {"from": "Quistis Trepe", "label": "3.76", "title": "combo_ct:1256, comboWR:60.51, combo+-:3.76, AB_AveWR:56.75", "to": "Summon: Fat Chocobo", "value": 1256}, {"from": "Quistis Trepe", "label": "5.63", "title": "combo_ct:890, comboWR:63.93, combo+-:5.63, AB_AveWR:58.3", "to": "Summon: Fenrir", "value": 890}, {"from": "Quistis Trepe", "label": "3.03", "title": "combo_ct:1793, comboWR:60.18, combo+-:3.03, AB_AveWR:57.15", "to": "Town Greeter", "value": 1793}, {"from": "Quistis Trepe", "label": "4.2", "title": "combo_ct:1537, comboWR:61.35, combo+-:4.2, AB_AveWR:57.15", "to": "Ignis Scientia", "value": 1537}, {"from": "Quistis Trepe", "label": "5.55", "title": "combo_ct:1352, comboWR:62.5, combo+-:5.55, AB_AveWR:56.95", "to": "Omega, Heartless Evolution", "value": 1352}, {"from": "Dragoon\u0027s Wyvern", "label": "3.62", "title": "combo_ct:22621, comboWR:62.42, combo+-:3.62, AB_AveWR:58.8", "to": "Combat Tutorial", "value": 22621}, {"from": "Dragoon\u0027s Wyvern", "label": "3.01", "title": "combo_ct:20785, comboWR:61.26, combo+-:3.01, AB_AveWR:58.25", "to": "Dreams of Laguna", "value": 20785}, {"from": "Dragoon\u0027s Wyvern", "label": "4.03", "title": "combo_ct:11727, comboWR:62.88, combo+-:4.03, AB_AveWR:58.85", "to": "Eject", "value": 11727}, {"from": "Dragoon\u0027s Wyvern", "label": "3.22", "title": "combo_ct:24273, comboWR:61.62, combo+-:3.22, AB_AveWR:58.4", "to": "Ice Magic", "value": 24273}, {"from": "Dragoon\u0027s Wyvern", "label": "4.26", "title": "combo_ct:10817, comboWR:62.56, combo+-:4.26, AB_AveWR:58.3", "to": "Il Mheg Pixie", "value": 10817}, {"from": "Dragoon\u0027s Wyvern", "label": "4.49", "title": "combo_ct:7686, comboWR:63.39, combo+-:4.49, AB_AveWR:58.9", "to": "Sidequest: Card Collection", "value": 7686}, {"from": "Dragoon\u0027s Wyvern", "label": "3.62", "title": "combo_ct:9914, comboWR:62.22, combo+-:3.62, AB_AveWR:58.6", "to": "Sleep Magic", "value": 9914}, {"from": "Dragoon\u0027s Wyvern", "label": "3.06", "title": "combo_ct:8137, comboWR:60.71, combo+-:3.06, AB_AveWR:57.65", "to": "Summon: Shiva", "value": 8137}, {"from": "Dragoon\u0027s Wyvern", "label": "4.13", "title": "combo_ct:10748, comboWR:63.03, combo+-:4.13, AB_AveWR:58.9", "to": "Swallowed by Leviathan", "value": 10748}, {"from": "Dragoon\u0027s Wyvern", "label": "3.25", "title": "combo_ct:5244, comboWR:60.95, combo+-:3.25, AB_AveWR:57.7", "to": "Travel the Overworld", "value": 5244}, {"from": "Dragoon\u0027s Wyvern", "label": "3.68", "title": "combo_ct:9929, comboWR:62.23, combo+-:3.68, AB_AveWR:58.55", "to": "Ultros, Obnoxious Octopus", "value": 9929}, {"from": "Dragoon\u0027s Wyvern", "label": "3.83", "title": "combo_ct:1033, comboWR:59.63, combo+-:3.83, AB_AveWR:55.8", "to": "Airship Crash", "value": 1033}, {"from": "Dragoon\u0027s Wyvern", "label": "5.13", "title": "combo_ct:580, comboWR:61.03, combo+-:5.13, AB_AveWR:55.9", "to": "Rydia\u0027s Return", "value": 580}, {"from": "Dragoon\u0027s Wyvern", "label": "3.56", "title": "combo_ct:2394, comboWR:62.11, combo+-:3.56, AB_AveWR:58.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 2394}, {"from": "Dragoon\u0027s Wyvern", "label": "3.67", "title": "combo_ct:4065, comboWR:62.02, combo+-:3.67, AB_AveWR:58.35", "to": "Omega, Heartless Evolution", "value": 4065}, {"from": "Combat Tutorial", "label": "3.42", "title": "combo_ct:17619, comboWR:61.77, combo+-:3.42, AB_AveWR:58.35", "to": "Dreams of Laguna", "value": 17619}, {"from": "Combat Tutorial", "label": "4.34", "title": "combo_ct:9952, comboWR:63.29, combo+-:4.34, AB_AveWR:58.95", "to": "Eject", "value": 9952}, {"from": "Combat Tutorial", "label": "3.7", "title": "combo_ct:21538, comboWR:62.2, combo+-:3.7, AB_AveWR:58.5", "to": "Ice Magic", "value": 21538}, {"from": "Combat Tutorial", "label": "3.2", "title": "combo_ct:9324, comboWR:61.6, combo+-:3.2, AB_AveWR:58.4", "to": "Il Mheg Pixie", "value": 9324}, {"from": "Combat Tutorial", "label": "3.41", "title": "combo_ct:5363, comboWR:60.81, combo+-:3.41, AB_AveWR:57.4", "to": "Magic Damper", "value": 5363}, {"from": "Combat Tutorial", "label": "3.82", "title": "combo_ct:18555, comboWR:62.22, combo+-:3.82, AB_AveWR:58.4", "to": "Sahagin", "value": 18555}, {"from": "Combat Tutorial", "label": "3.74", "title": "combo_ct:14629, comboWR:61.04, combo+-:3.74, AB_AveWR:57.3", "to": "Scorpion Sentinel", "value": 14629}, {"from": "Combat Tutorial", "label": "5.21", "title": "combo_ct:7001, comboWR:64.21, combo+-:5.21, AB_AveWR:59.0", "to": "Sidequest: Card Collection", "value": 7001}, {"from": "Combat Tutorial", "label": "3.89", "title": "combo_ct:8390, comboWR:62.59, combo+-:3.89, AB_AveWR:58.7", "to": "Sleep Magic", "value": 8390}, {"from": "Combat Tutorial", "label": "3.85", "title": "combo_ct:14406, comboWR:60.9, combo+-:3.85, AB_AveWR:57.05", "to": "Stuck in Summoner\u0027s Sanctum", "value": 14406}, {"from": "Combat Tutorial", "label": "4.08", "title": "combo_ct:9743, comboWR:63.08, combo+-:4.08, AB_AveWR:59.0", "to": "Swallowed by Leviathan", "value": 9743}, {"from": "Combat Tutorial", "label": "3.22", "title": "combo_ct:14648, comboWR:61.32, combo+-:3.22, AB_AveWR:58.1", "to": "Syncopate", "value": 14648}, {"from": "Combat Tutorial", "label": "3.23", "title": "combo_ct:4447, comboWR:61.03, combo+-:3.23, AB_AveWR:57.8", "to": "Travel the Overworld", "value": 4447}, {"from": "Combat Tutorial", "label": "5.2", "title": "combo_ct:8842, comboWR:63.85, combo+-:5.2, AB_AveWR:58.65", "to": "Ultros, Obnoxious Octopus", "value": 8842}, {"from": "Combat Tutorial", "label": "3.53", "title": "combo_ct:3857, comboWR:61.63, combo+-:3.53, AB_AveWR:58.1", "to": "Chocobo Kick", "value": 3857}, {"from": "Combat Tutorial", "label": "6.78", "title": "combo_ct:791, comboWR:63.08, combo+-:6.78, AB_AveWR:56.3", "to": "Clash of the Eikons", "value": 791}, {"from": "Combat Tutorial", "label": "4.4", "title": "combo_ct:1773, comboWR:63.0, combo+-:4.4, AB_AveWR:58.6", "to": "Coliseum Behemoth", "value": 1773}, {"from": "Combat Tutorial", "label": "3.24", "title": "combo_ct:2813, comboWR:60.29, combo+-:3.24, AB_AveWR:57.05", "to": "Gran Pulse Ochu", "value": 2813}, {"from": "Combat Tutorial", "label": "4.12", "title": "combo_ct:519, comboWR:60.12, combo+-:4.12, AB_AveWR:56.0", "to": "Rydia\u0027s Return", "value": 519}, {"from": "Combat Tutorial", "label": "3.76", "title": "combo_ct:1697, comboWR:63.11, combo+-:3.76, AB_AveWR:59.35", "to": "Sazh\u0027s Chocobo", "value": 1697}, {"from": "Combat Tutorial", "label": "3.09", "title": "combo_ct:2584, comboWR:62.89, combo+-:3.09, AB_AveWR:59.8", "to": "Summon: Fenrir", "value": 2584}, {"from": "Combat Tutorial", "label": "4.09", "title": "combo_ct:3612, comboWR:62.54, combo+-:4.09, AB_AveWR:58.45", "to": "Omega, Heartless Evolution", "value": 3612}, {"from": "Dreams of Laguna", "label": "3.48", "title": "combo_ct:9869, comboWR:61.88, combo+-:3.48, AB_AveWR:58.4", "to": "Eject", "value": 9869}, {"from": "Dreams of Laguna", "label": "3.17", "title": "combo_ct:20190, comboWR:61.12, combo+-:3.17, AB_AveWR:57.95", "to": "Ice Magic", "value": 20190}, {"from": "Dreams of Laguna", "label": "3.76", "title": "combo_ct:5042, comboWR:60.61, combo+-:3.76, AB_AveWR:56.85", "to": "Magic Damper", "value": 5042}, {"from": "Dreams of Laguna", "label": "3.17", "title": "combo_ct:5943, comboWR:59.87, combo+-:3.17, AB_AveWR:56.7", "to": "Relm\u0027s Sketching", "value": 5943}, {"from": "Dreams of Laguna", "label": "4.0", "title": "combo_ct:20626, comboWR:61.85, combo+-:4.0, AB_AveWR:57.85", "to": "Sahagin", "value": 20626}, {"from": "Dreams of Laguna", "label": "3.06", "title": "combo_ct:12094, comboWR:59.81, combo+-:3.06, AB_AveWR:56.75", "to": "Scorpion Sentinel", "value": 12094}, {"from": "Dreams of Laguna", "label": "5.15", "title": "combo_ct:6859, comboWR:63.6, combo+-:5.15, AB_AveWR:58.45", "to": "Sidequest: Card Collection", "value": 6859}, {"from": "Dreams of Laguna", "label": "4.1", "title": "combo_ct:7581, comboWR:62.25, combo+-:4.1, AB_AveWR:58.15", "to": "Sleep Magic", "value": 7581}, {"from": "Dreams of Laguna", "label": "3.63", "title": "combo_ct:9232, comboWR:62.08, combo+-:3.63, AB_AveWR:58.45", "to": "Swallowed by Leviathan", "value": 9232}, {"from": "Dreams of Laguna", "label": "3.31", "title": "combo_ct:14736, comboWR:60.86, combo+-:3.31, AB_AveWR:57.55", "to": "Syncopate", "value": 14736}, {"from": "Dreams of Laguna", "label": "5.05", "title": "combo_ct:9479, comboWR:63.15, combo+-:5.05, AB_AveWR:58.1", "to": "Ultros, Obnoxious Octopus", "value": 9479}, {"from": "Dreams of Laguna", "label": "3.69", "title": "combo_ct:730, comboWR:59.04, combo+-:3.69, AB_AveWR:55.35", "to": "Airship Crash", "value": 730}, {"from": "Dreams of Laguna", "label": "4.41", "title": "combo_ct:932, comboWR:59.76, combo+-:4.41, AB_AveWR:55.35", "to": "Reach the Horizon", "value": 932}, {"from": "Dreams of Laguna", "label": "4.17", "title": "combo_ct:3103, comboWR:62.07, combo+-:4.17, AB_AveWR:57.9", "to": "Omega, Heartless Evolution", "value": 3103}, {"from": "Eject", "label": "3.09", "title": "combo_ct:11323, comboWR:61.64, combo+-:3.09, AB_AveWR:58.55", "to": "Ice Magic", "value": 11323}, {"from": "Eject", "label": "3.8", "title": "combo_ct:4781, comboWR:62.25, combo+-:3.8, AB_AveWR:58.45", "to": "Il Mheg Pixie", "value": 4781}, {"from": "Eject", "label": "3.33", "title": "combo_ct:2527, comboWR:60.78, combo+-:3.33, AB_AveWR:57.45", "to": "Magic Damper", "value": 2527}, {"from": "Eject", "label": "3.9", "title": "combo_ct:2912, comboWR:61.2, combo+-:3.9, AB_AveWR:57.3", "to": "Relm\u0027s Sketching", "value": 2912}, {"from": "Eject", "label": "5.07", "title": "combo_ct:10798, comboWR:63.52, combo+-:5.07, AB_AveWR:58.45", "to": "Sahagin", "value": 10798}, {"from": "Eject", "label": "3.14", "title": "combo_ct:7069, comboWR:60.49, combo+-:3.14, AB_AveWR:57.35", "to": "Scorpion Sentinel", "value": 7069}, {"from": "Eject", "label": "5.28", "title": "combo_ct:3541, comboWR:64.33, combo+-:5.28, AB_AveWR:59.05", "to": "Sidequest: Card Collection", "value": 3541}, {"from": "Eject", "label": "3.37", "title": "combo_ct:4250, comboWR:62.12, combo+-:3.37, AB_AveWR:58.75", "to": "Sleep Magic", "value": 4250}, {"from": "Eject", "label": "3.11", "title": "combo_ct:7828, comboWR:60.21, combo+-:3.11, AB_AveWR:57.1", "to": "Stuck in Summoner\u0027s Sanctum", "value": 7828}, {"from": "Eject", "label": "3.72", "title": "combo_ct:3599, comboWR:61.52, combo+-:3.72, AB_AveWR:57.8", "to": "Summon: Shiva", "value": 3599}, {"from": "Eject", "label": "4.69", "title": "combo_ct:5151, comboWR:63.74, combo+-:4.69, AB_AveWR:59.05", "to": "Swallowed by Leviathan", "value": 5151}, {"from": "Eject", "label": "4.26", "title": "combo_ct:7802, comboWR:62.41, combo+-:4.26, AB_AveWR:58.15", "to": "Syncopate", "value": 7802}, {"from": "Eject", "label": "5.16", "title": "combo_ct:2541, comboWR:63.01, combo+-:5.16, AB_AveWR:57.85", "to": "Travel the Overworld", "value": 2541}, {"from": "Eject", "label": "4.73", "title": "combo_ct:5095, comboWR:63.43, combo+-:4.73, AB_AveWR:58.7", "to": "Ultros, Obnoxious Octopus", "value": 5095}, {"from": "Eject", "label": "5.27", "title": "combo_ct:948, comboWR:63.92, combo+-:5.27, AB_AveWR:58.65", "to": "Coliseum Behemoth", "value": 948}, {"from": "Eject", "label": "4.27", "title": "combo_ct:1420, comboWR:60.77, combo+-:4.27, AB_AveWR:56.5", "to": "Prishe\u0027s Wanderings", "value": 1420}, {"from": "Eject", "label": "4.81", "title": "combo_ct:604, comboWR:60.76, combo+-:4.81, AB_AveWR:55.95", "to": "Reach the Horizon", "value": 604}, {"from": "Eject", "label": "5.26", "title": "combo_ct:846, comboWR:64.66, combo+-:5.26, AB_AveWR:59.4", "to": "Sazh\u0027s Chocobo", "value": 846}, {"from": "Eject", "label": "3.8", "title": "combo_ct:1216, comboWR:63.65, combo+-:3.8, AB_AveWR:59.85", "to": "Summon: Fenrir", "value": 1216}, {"from": "Eject", "label": "3.58", "title": "combo_ct:2195, comboWR:62.28, combo+-:3.58, AB_AveWR:58.7", "to": "Ignis Scientia", "value": 2195}, {"from": "Eject", "label": "4.3", "title": "combo_ct:1933, comboWR:62.8, combo+-:4.3, AB_AveWR:58.5", "to": "Omega, Heartless Evolution", "value": 1933}, {"from": "Ice Magic", "label": "3.3", "title": "combo_ct:9951, comboWR:61.3, combo+-:3.3, AB_AveWR:58.0", "to": "Il Mheg Pixie", "value": 9951}, {"from": "Ice Magic", "label": "3.5", "title": "combo_ct:21832, comboWR:61.5, combo+-:3.5, AB_AveWR:58.0", "to": "Sahagin", "value": 21832}, {"from": "Ice Magic", "label": "4.54", "title": "combo_ct:7452, comboWR:63.14, combo+-:4.54, AB_AveWR:58.6", "to": "Sidequest: Card Collection", "value": 7452}, {"from": "Ice Magic", "label": "3.54", "title": "combo_ct:10221, comboWR:62.14, combo+-:3.54, AB_AveWR:58.6", "to": "Swallowed by Leviathan", "value": 10221}, {"from": "Ice Magic", "label": "4.29", "title": "combo_ct:5325, comboWR:61.69, combo+-:4.29, AB_AveWR:57.4", "to": "Travel the Overworld", "value": 5325}, {"from": "Ice Magic", "label": "3.52", "title": "combo_ct:10517, comboWR:61.77, combo+-:3.52, AB_AveWR:58.25", "to": "Ultros, Obnoxious Octopus", "value": 10517}, {"from": "Ice Magic", "label": "4.07", "title": "combo_ct:545, comboWR:59.82, combo+-:4.07, AB_AveWR:55.75", "to": "Blitzball Shot", "value": 545}, {"from": "Ice Magic", "label": "3.37", "title": "combo_ct:3260, comboWR:59.42, combo+-:3.37, AB_AveWR:56.05", "to": "Prishe\u0027s Wanderings", "value": 3260}, {"from": "Ice Magic", "label": "3.77", "title": "combo_ct:1262, comboWR:59.27, combo+-:3.77, AB_AveWR:55.5", "to": "Reach the Horizon", "value": 1262}, {"from": "Il Mheg Pixie", "label": "3.38", "title": "combo_ct:2754, comboWR:60.13, combo+-:3.38, AB_AveWR:56.75", "to": "Relm\u0027s Sketching", "value": 2754}, {"from": "Il Mheg Pixie", "label": "4.61", "title": "combo_ct:3109, comboWR:63.11, combo+-:4.61, AB_AveWR:58.5", "to": "Sidequest: Card Collection", "value": 3109}, {"from": "Il Mheg Pixie", "label": "3.41", "title": "combo_ct:4152, comboWR:61.61, combo+-:3.41, AB_AveWR:58.2", "to": "Sleep Magic", "value": 4152}, {"from": "Il Mheg Pixie", "label": "3.49", "title": "combo_ct:3505, comboWR:60.74, combo+-:3.49, AB_AveWR:57.25", "to": "Summon: Shiva", "value": 3505}, {"from": "Il Mheg Pixie", "label": "3.41", "title": "combo_ct:4279, comboWR:61.91, combo+-:3.41, AB_AveWR:58.5", "to": "Swallowed by Leviathan", "value": 4279}, {"from": "Il Mheg Pixie", "label": "3.54", "title": "combo_ct:2035, comboWR:60.84, combo+-:3.54, AB_AveWR:57.3", "to": "Travel the Overworld", "value": 2035}, {"from": "Il Mheg Pixie", "label": "3.73", "title": "combo_ct:3885, comboWR:61.88, combo+-:3.73, AB_AveWR:58.15", "to": "Ultros, Obnoxious Octopus", "value": 3885}, {"from": "Il Mheg Pixie", "label": "3.05", "title": "combo_ct:664, comboWR:61.9, combo+-:3.05, AB_AveWR:58.85", "to": "Sazh\u0027s Chocobo", "value": 664}, {"from": "Il Mheg Pixie", "label": "3.23", "title": "combo_ct:1089, comboWR:62.53, combo+-:3.23, AB_AveWR:59.3", "to": "Summon: Fenrir", "value": 1089}, {"from": "Il Mheg Pixie", "label": "3.16", "title": "combo_ct:1967, comboWR:61.31, combo+-:3.16, AB_AveWR:58.15", "to": "Ignis Scientia", "value": 1967}, {"from": "Magic Damper", "label": "4.01", "title": "combo_ct:1613, comboWR:59.76, combo+-:4.01, AB_AveWR:55.75", "to": "Relm\u0027s Sketching", "value": 1613}, {"from": "Magic Damper", "label": "3.13", "title": "combo_ct:1890, comboWR:60.63, combo+-:3.13, AB_AveWR:57.5", "to": "Sidequest: Card Collection", "value": 1890}, {"from": "Magic Damper", "label": "4.02", "title": "combo_ct:2248, comboWR:61.52, combo+-:4.02, AB_AveWR:57.5", "to": "Swallowed by Leviathan", "value": 2248}, {"from": "Magic Damper", "label": "3.67", "title": "combo_ct:1209, comboWR:59.97, combo+-:3.67, AB_AveWR:56.3", "to": "Travel the Overworld", "value": 1209}, {"from": "Magic Damper", "label": "5.29", "title": "combo_ct:505, comboWR:60.79, combo+-:5.29, AB_AveWR:55.5", "to": "Bard\u0027s Bow", "value": 505}, {"from": "Magic Damper", "label": "3.58", "title": "combo_ct:771, comboWR:60.18, combo+-:3.58, AB_AveWR:56.6", "to": "Chocobo Kick", "value": 771}, {"from": "Magic Damper", "label": "3.71", "title": "combo_ct:902, comboWR:60.86, combo+-:3.71, AB_AveWR:57.15", "to": "Town Greeter", "value": 902}, {"from": "Sahagin", "label": "4.29", "title": "combo_ct:6427, comboWR:61.04, combo+-:4.29, AB_AveWR:56.75", "to": "Relm\u0027s Sketching", "value": 6427}, {"from": "Sahagin", "label": "3.96", "title": "combo_ct:17639, comboWR:60.66, combo+-:3.96, AB_AveWR:56.7", "to": "Retrieve the Esper", "value": 17639}, {"from": "Sahagin", "label": "4.59", "title": "combo_ct:7493, comboWR:63.09, combo+-:4.59, AB_AveWR:58.5", "to": "Sidequest: Card Collection", "value": 7493}, {"from": "Sahagin", "label": "3.17", "title": "combo_ct:7442, comboWR:61.37, combo+-:3.17, AB_AveWR:58.2", "to": "Sleep Magic", "value": 7442}, {"from": "Sahagin", "label": "3.31", "title": "combo_ct:9103, comboWR:61.81, combo+-:3.31, AB_AveWR:58.5", "to": "Swallowed by Leviathan", "value": 9103}, {"from": "Scorpion Sentinel", "label": "5.8", "title": "combo_ct:4853, comboWR:63.2, combo+-:5.8, AB_AveWR:57.4", "to": "Sidequest: Card Collection", "value": 4853}, {"from": "Scorpion Sentinel", "label": "4.66", "title": "combo_ct:3901, comboWR:60.86, combo+-:4.66, AB_AveWR:56.2", "to": "Travel the Overworld", "value": 3901}, {"from": "Scorpion Sentinel", "label": "3.12", "title": "combo_ct:2610, comboWR:59.62, combo+-:3.12, AB_AveWR:56.5", "to": "Chocobo Kick", "value": 2610}, {"from": "Scorpion Sentinel", "label": "6.17", "title": "combo_ct:946, comboWR:60.47, combo+-:6.17, AB_AveWR:54.3", "to": "Reach the Horizon", "value": 946}, {"from": "Scorpion Sentinel", "label": "3.29", "title": "combo_ct:1776, comboWR:61.49, combo+-:3.29, AB_AveWR:58.2", "to": "Summon: Fenrir", "value": 1776}, {"from": "Scorpion Sentinel", "label": "3.03", "title": "combo_ct:3199, comboWR:60.08, combo+-:3.03, AB_AveWR:57.05", "to": "Ignis Scientia", "value": 3199}, {"from": "Scorpion Sentinel", "label": "3.49", "title": "combo_ct:2905, comboWR:60.34, combo+-:3.49, AB_AveWR:56.85", "to": "Omega, Heartless Evolution", "value": 2905}, {"from": "Sidequest: Card Collection", "label": "3.44", "title": "combo_ct:2802, comboWR:59.74, combo+-:3.44, AB_AveWR:56.3", "to": "Ice Flan", "value": 2802}, {"from": "Sidequest: Card Collection", "label": "4.55", "title": "combo_ct:1831, comboWR:60.4, combo+-:4.55, AB_AveWR:55.85", "to": "Qiqirn Merchant", "value": 1831}, {"from": "Sidequest: Card Collection", "label": "3.82", "title": "combo_ct:1795, comboWR:61.17, combo+-:3.82, AB_AveWR:57.35", "to": "Relm\u0027s Sketching", "value": 1795}, {"from": "Sidequest: Card Collection", "label": "6.0", "title": "combo_ct:2875, comboWR:64.8, combo+-:6.0, AB_AveWR:58.8", "to": "Sleep Magic", "value": 2875}, {"from": "Sidequest: Card Collection", "label": "4.07", "title": "combo_ct:4840, comboWR:61.22, combo+-:4.07, AB_AveWR:57.15", "to": "Stuck in Summoner\u0027s Sanctum", "value": 4840}, {"from": "Sidequest: Card Collection", "label": "5.53", "title": "combo_ct:3726, comboWR:64.63, combo+-:5.53, AB_AveWR:59.1", "to": "Swallowed by Leviathan", "value": 3726}, {"from": "Sidequest: Card Collection", "label": "5.0", "title": "combo_ct:5533, comboWR:63.2, combo+-:5.0, AB_AveWR:58.2", "to": "Syncopate", "value": 5533}, {"from": "Sidequest: Card Collection", "label": "3.82", "title": "combo_ct:1024, comboWR:59.77, combo+-:3.82, AB_AveWR:55.95", "to": "Thief\u0027s Knife", "value": 1024}, {"from": "Sidequest: Card Collection", "label": "4.5", "title": "combo_ct:1670, comboWR:62.4, combo+-:4.5, AB_AveWR:57.9", "to": "Travel the Overworld", "value": 1670}, {"from": "Sidequest: Card Collection", "label": "7.55", "title": "combo_ct:3561, comboWR:66.3, combo+-:7.55, AB_AveWR:58.75", "to": "Ultros, Obnoxious Octopus", "value": 3561}, {"from": "Sidequest: Card Collection", "label": "3.68", "title": "combo_ct:849, comboWR:60.78, combo+-:3.68, AB_AveWR:57.1", "to": "Bard\u0027s Bow", "value": 849}, {"from": "Sidequest: Card Collection", "label": "5.12", "title": "combo_ct:1273, comboWR:63.32, combo+-:5.12, AB_AveWR:58.2", "to": "Chocobo Kick", "value": 1273}, {"from": "Sidequest: Card Collection", "label": "3.91", "title": "combo_ct:1145, comboWR:60.96, combo+-:3.91, AB_AveWR:57.05", "to": "Goobbue Gardener", "value": 1145}, {"from": "Sidequest: Card Collection", "label": "5.55", "title": "combo_ct:941, comboWR:62.7, combo+-:5.55, AB_AveWR:57.15", "to": "Gran Pulse Ochu", "value": 941}, {"from": "Sidequest: Card Collection", "label": "5.24", "title": "combo_ct:642, comboWR:61.84, combo+-:5.24, AB_AveWR:56.6", "to": "Gysahl Greens", "value": 642}, {"from": "Sidequest: Card Collection", "label": "3.07", "title": "combo_ct:904, comboWR:59.62, combo+-:3.07, AB_AveWR:56.55", "to": "Prishe\u0027s Wanderings", "value": 904}, {"from": "Sidequest: Card Collection", "label": "6.01", "title": "combo_ct:880, comboWR:65.91, combo+-:6.01, AB_AveWR:59.9", "to": "Summon: Fenrir", "value": 880}, {"from": "Sidequest: Card Collection", "label": "5.77", "title": "combo_ct:1815, comboWR:64.52, combo+-:5.77, AB_AveWR:58.75", "to": "Town Greeter", "value": 1815}, {"from": "Sidequest: Card Collection", "label": "7.3", "title": "combo_ct:1303, comboWR:65.85, combo+-:7.3, AB_AveWR:58.55", "to": "Omega, Heartless Evolution", "value": 1303}, {"from": "Sleep Magic", "label": "3.54", "title": "combo_ct:3507, comboWR:59.54, combo+-:3.54, AB_AveWR:56.0", "to": "Ice Flan", "value": 3507}, {"from": "Sleep Magic", "label": "3.22", "title": "combo_ct:5961, comboWR:60.22, combo+-:3.22, AB_AveWR:57.0", "to": "Retrieve the Esper", "value": 5961}, {"from": "Sleep Magic", "label": "4.34", "title": "combo_ct:3180, comboWR:61.89, combo+-:4.34, AB_AveWR:57.55", "to": "Summon: Shiva", "value": 3180}, {"from": "Sleep Magic", "label": "5.28", "title": "combo_ct:4076, comboWR:64.08, combo+-:5.28, AB_AveWR:58.8", "to": "Swallowed by Leviathan", "value": 4076}, {"from": "Sleep Magic", "label": "3.2", "title": "combo_ct:5856, comboWR:61.1, combo+-:3.2, AB_AveWR:57.9", "to": "Syncopate", "value": 5856}, {"from": "Sleep Magic", "label": "5.05", "title": "combo_ct:1743, comboWR:60.7, combo+-:5.05, AB_AveWR:55.65", "to": "Thief\u0027s Knife", "value": 1743}, {"from": "Sleep Magic", "label": "5.75", "title": "combo_ct:2082, comboWR:63.35, combo+-:5.75, AB_AveWR:57.6", "to": "Travel the Overworld", "value": 2082}, {"from": "Sleep Magic", "label": "3.37", "title": "combo_ct:3562, comboWR:61.82, combo+-:3.37, AB_AveWR:58.45", "to": "Ultros, Obnoxious Octopus", "value": 3562}, {"from": "Sleep Magic", "label": "4.72", "title": "combo_ct:903, comboWR:63.12, combo+-:4.72, AB_AveWR:58.4", "to": "Coliseum Behemoth", "value": 903}, {"from": "Sleep Magic", "label": "5.58", "title": "combo_ct:532, comboWR:61.28, combo+-:5.58, AB_AveWR:55.7", "to": "Reach the Horizon", "value": 532}, {"from": "Sleep Magic", "label": "4.64", "title": "combo_ct:1073, comboWR:63.09, combo+-:4.64, AB_AveWR:58.45", "to": "Vanille, Cheerful l\u0027Cie", "value": 1073}, {"from": "Sleep Magic", "label": "4.37", "title": "combo_ct:1985, comboWR:62.82, combo+-:4.37, AB_AveWR:58.45", "to": "Ignis Scientia", "value": 1985}, {"from": "Sleep Magic", "label": "3.35", "title": "combo_ct:1784, comboWR:61.6, combo+-:3.35, AB_AveWR:58.25", "to": "Omega, Heartless Evolution", "value": 1784}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "3.18", "title": "combo_ct:6214, comboWR:59.08, combo+-:3.18, AB_AveWR:55.9", "to": "Summon: Shiva", "value": 6214}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "4.69", "title": "combo_ct:4037, comboWR:60.64, combo+-:4.69, AB_AveWR:55.95", "to": "Travel the Overworld", "value": 4037}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "4.32", "title": "combo_ct:713, comboWR:58.77, combo+-:4.32, AB_AveWR:54.45", "to": "Clash of the Eikons", "value": 713}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "3.49", "title": "combo_ct:1690, comboWR:60.24, combo+-:3.49, AB_AveWR:56.75", "to": "Coliseum Behemoth", "value": 1690}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "4.23", "title": "combo_ct:1093, comboWR:58.28, combo+-:4.23, AB_AveWR:54.05", "to": "Reach the Horizon", "value": 1093}, {"from": "Stuck in Summoner\u0027s Sanctum", "label": "3.12", "title": "combo_ct:1971, comboWR:59.92, combo+-:3.12, AB_AveWR:56.8", "to": "Vanille, Cheerful l\u0027Cie", "value": 1971}, {"from": "Swallowed by Leviathan", "label": "3.08", "title": "combo_ct:2439, comboWR:60.43, combo+-:3.08, AB_AveWR:57.35", "to": "Relm\u0027s Sketching", "value": 2439}, {"from": "Swallowed by Leviathan", "label": "3.11", "title": "combo_ct:7261, comboWR:61.31, combo+-:3.11, AB_AveWR:58.2", "to": "Syncopate", "value": 7261}, {"from": "Swallowed by Leviathan", "label": "5.17", "title": "combo_ct:2537, comboWR:63.07, combo+-:5.17, AB_AveWR:57.9", "to": "Travel the Overworld", "value": 2537}, {"from": "Swallowed by Leviathan", "label": "3.42", "title": "combo_ct:3999, comboWR:62.17, combo+-:3.42, AB_AveWR:58.75", "to": "Ultros, Obnoxious Octopus", "value": 3999}, {"from": "Swallowed by Leviathan", "label": "3.65", "title": "combo_ct:1910, comboWR:61.05, combo+-:3.65, AB_AveWR:57.4", "to": "Balamb T-Rexaur", "value": 1910}, {"from": "Swallowed by Leviathan", "label": "3.12", "title": "combo_ct:1101, comboWR:60.22, combo+-:3.12, AB_AveWR:57.1", "to": "Bard\u0027s Bow", "value": 1101}, {"from": "Swallowed by Leviathan", "label": "3.9", "title": "combo_ct:1702, comboWR:62.1, combo+-:3.9, AB_AveWR:58.2", "to": "Chocobo Kick", "value": 1702}, {"from": "Swallowed by Leviathan", "label": "3.07", "title": "combo_ct:1292, comboWR:60.22, combo+-:3.07, AB_AveWR:57.15", "to": "Gran Pulse Ochu", "value": 1292}, {"from": "Swallowed by Leviathan", "label": "3.3", "title": "combo_ct:955, comboWR:59.9, combo+-:3.3, AB_AveWR:56.6", "to": "Gysahl Greens", "value": 955}, {"from": "Swallowed by Leviathan", "label": "3.64", "title": "combo_ct:1291, comboWR:60.19, combo+-:3.64, AB_AveWR:56.55", "to": "Prishe\u0027s Wanderings", "value": 1291}, {"from": "Swallowed by Leviathan", "label": "4.07", "title": "combo_ct:551, comboWR:60.07, combo+-:4.07, AB_AveWR:56.0", "to": "Reach the Horizon", "value": 551}, {"from": "Swallowed by Leviathan", "label": "4.73", "title": "combo_ct:1227, comboWR:64.63, combo+-:4.73, AB_AveWR:59.9", "to": "Summon: Fenrir", "value": 1227}, {"from": "Swallowed by Leviathan", "label": "4.84", "title": "combo_ct:2672, comboWR:63.59, combo+-:4.84, AB_AveWR:58.75", "to": "Town Greeter", "value": 2672}, {"from": "Swallowed by Leviathan", "label": "5.9", "title": "combo_ct:1205, comboWR:64.65, combo+-:5.9, AB_AveWR:58.75", "to": "Vanille, Cheerful l\u0027Cie", "value": 1205}, {"from": "Swallowed by Leviathan", "label": "4.25", "title": "combo_ct:2057, comboWR:63.0, combo+-:4.25, AB_AveWR:58.75", "to": "Ignis Scientia", "value": 2057}, {"from": "Swallowed by Leviathan", "label": "4.1", "title": "combo_ct:1949, comboWR:62.65, combo+-:4.1, AB_AveWR:58.55", "to": "Omega, Heartless Evolution", "value": 1949}, {"from": "Syncopate", "label": "4.63", "title": "combo_ct:3849, comboWR:61.63, combo+-:4.63, AB_AveWR:57.0", "to": "Travel the Overworld", "value": 3849}, {"from": "Syncopate", "label": "4.1", "title": "combo_ct:2416, comboWR:60.6, combo+-:4.1, AB_AveWR:56.5", "to": "Balamb T-Rexaur", "value": 2416}, {"from": "Syncopate", "label": "4.29", "title": "combo_ct:815, comboWR:59.39, combo+-:4.29, AB_AveWR:55.1", "to": "Reach the Horizon", "value": 815}, {"from": "Syncopate", "label": "5.24", "title": "combo_ct:1524, comboWR:64.24, combo+-:5.24, AB_AveWR:59.0", "to": "Summon: Fenrir", "value": 1524}, {"from": "Syncopate", "label": "3.18", "title": "combo_ct:2838, comboWR:61.03, combo+-:3.18, AB_AveWR:57.85", "to": "Ignis Scientia", "value": 2838}, {"from": "Syncopate", "label": "4.16", "title": "combo_ct:2629, comboWR:61.81, combo+-:4.16, AB_AveWR:57.65", "to": "Omega, Heartless Evolution", "value": 2629}, {"from": "Travel the Overworld", "label": "4.25", "title": "combo_ct:3231, comboWR:58.9, combo+-:4.25, AB_AveWR:54.65", "to": "Qiqirn Merchant", "value": 3231}, {"from": "Travel the Overworld", "label": "4.76", "title": "combo_ct:1430, comboWR:60.91, combo+-:4.76, AB_AveWR:56.15", "to": "Relm\u0027s Sketching", "value": 1430}, {"from": "Travel the Overworld", "label": "6.61", "title": "combo_ct:736, comboWR:61.41, combo+-:6.61, AB_AveWR:54.8", "to": "Airship Crash", "value": 736}, {"from": "Travel the Overworld", "label": "3.27", "title": "combo_ct:2546, comboWR:59.47, combo+-:3.27, AB_AveWR:56.2", "to": "Balamb T-Rexaur", "value": 2546}, {"from": "Travel the Overworld", "label": "3.3", "title": "combo_ct:1620, comboWR:59.2, combo+-:3.3, AB_AveWR:55.9", "to": "Bard\u0027s Bow", "value": 1620}, {"from": "Travel the Overworld", "label": "5.42", "title": "combo_ct:2533, comboWR:62.42, combo+-:5.42, AB_AveWR:57.0", "to": "Chocobo Kick", "value": 2533}, {"from": "Travel the Overworld", "label": "4.05", "title": "combo_ct:570, comboWR:58.25, combo+-:4.05, AB_AveWR:54.2", "to": "Chocobo Racetrack", "value": 570}, {"from": "Travel the Overworld", "label": "6.2", "title": "combo_ct:513, comboWR:61.4, combo+-:6.2, AB_AveWR:55.2", "to": "Clash of the Eikons", "value": 513}, {"from": "Travel the Overworld", "label": "3.77", "title": "combo_ct:1260, comboWR:61.27, combo+-:3.77, AB_AveWR:57.5", "to": "Coliseum Behemoth", "value": 1260}, {"from": "Travel the Overworld", "label": "3.59", "title": "combo_ct:745, comboWR:58.79, combo+-:3.59, AB_AveWR:55.2", "to": "Commune with Beavers", "value": 745}, {"from": "Travel the Overworld", "label": "3.62", "title": "combo_ct:586, comboWR:59.22, combo+-:3.62, AB_AveWR:55.6", "to": "Diamond Weapon", "value": 586}, {"from": "Travel the Overworld", "label": "5.48", "title": "combo_ct:2542, comboWR:61.33, combo+-:5.48, AB_AveWR:55.85", "to": "Goobbue Gardener", "value": 2542}, {"from": "Travel the Overworld", "label": "7.01", "title": "combo_ct:1895, comboWR:62.96, combo+-:7.01, AB_AveWR:55.95", "to": "Gran Pulse Ochu", "value": 1895}, {"from": "Travel the Overworld", "label": "5.7", "title": "combo_ct:2308, comboWR:61.05, combo+-:5.7, AB_AveWR:55.35", "to": "Prishe\u0027s Wanderings", "value": 2308}, {"from": "Travel the Overworld", "label": "7.35", "title": "combo_ct:1152, comboWR:62.15, combo+-:7.35, AB_AveWR:54.8", "to": "Reach the Horizon", "value": 1152}, {"from": "Travel the Overworld", "label": "4.98", "title": "combo_ct:1115, comboWR:63.23, combo+-:4.98, AB_AveWR:58.25", "to": "Sazh\u0027s Chocobo", "value": 1115}, {"from": "Travel the Overworld", "label": "7.49", "title": "combo_ct:1665, comboWR:66.19, combo+-:7.49, AB_AveWR:58.7", "to": "Summon: Fenrir", "value": 1665}, {"from": "Travel the Overworld", "label": "3.97", "title": "combo_ct:1502, comboWR:61.52, combo+-:3.97, AB_AveWR:57.55", "to": "Torgal, A Fine Hound", "value": 1502}, {"from": "Travel the Overworld", "label": "3.29", "title": "combo_ct:3805, comboWR:60.84, combo+-:3.29, AB_AveWR:57.55", "to": "Town Greeter", "value": 3805}, {"from": "Travel the Overworld", "label": "3.26", "title": "combo_ct:1452, comboWR:60.81, combo+-:3.26, AB_AveWR:57.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 1452}, {"from": "Travel the Overworld", "label": "4.42", "title": "combo_ct:3140, comboWR:61.97, combo+-:4.42, AB_AveWR:57.55", "to": "Ignis Scientia", "value": 3140}, {"from": "Travel the Overworld", "label": "6.74", "title": "combo_ct:3074, comboWR:64.09, combo+-:6.74, AB_AveWR:57.35", "to": "Omega, Heartless Evolution", "value": 3074}, {"from": "Ultros, Obnoxious Octopus", "label": "3.2", "title": "combo_ct:836, comboWR:58.25, combo+-:3.2, AB_AveWR:55.05", "to": "The Prima Vista", "value": 836}, {"from": "Ultros, Obnoxious Octopus", "label": "3.88", "title": "combo_ct:3142, comboWR:60.88, combo+-:3.88, AB_AveWR:57.0", "to": "Relm\u0027s Sketching", "value": 3142}, {"from": "Ultros, Obnoxious Octopus", "label": "5.05", "title": "combo_ct:8345, comboWR:62.0, combo+-:5.05, AB_AveWR:56.95", "to": "Retrieve the Esper", "value": 8345}, {"from": "Chocobo Kick", "label": "3.78", "title": "combo_ct:2263, comboWR:58.73, combo+-:3.78, AB_AveWR:54.95", "to": "Qiqirn Merchant", "value": 2263}, {"from": "Chocobo Kick", "label": "5.34", "title": "combo_ct:1509, comboWR:62.29, combo+-:5.34, AB_AveWR:56.95", "to": "Summon: Shiva", "value": 1509}, {"from": "Chocobo Kick", "label": "3.26", "title": "combo_ct:2701, comboWR:57.76, combo+-:3.26, AB_AveWR:54.5", "to": "Chocobo Racetrack", "value": 2701}, {"from": "Chocobo Kick", "label": "4.99", "title": "combo_ct:6929, comboWR:63.99, combo+-:4.99, AB_AveWR:59.0", "to": "Summon: Fenrir", "value": 6929}, {"from": "Chocobo Kick", "label": "3.06", "title": "combo_ct:6176, comboWR:60.91, combo+-:3.06, AB_AveWR:57.85", "to": "Torgal, A Fine Hound", "value": 6176}, {"from": "Chocobo Kick", "label": "3.29", "title": "combo_ct:13884, comboWR:61.14, combo+-:3.29, AB_AveWR:57.85", "to": "Town Greeter", "value": 13884}, {"from": "Chocobo Kick", "label": "3.57", "title": "combo_ct:6320, comboWR:61.42, combo+-:3.57, AB_AveWR:57.85", "to": "Vanille, Cheerful l\u0027Cie", "value": 6320}, {"from": "Chocobo Kick", "label": "4.81", "title": "combo_ct:4670, comboWR:62.66, combo+-:4.81, AB_AveWR:57.85", "to": "Ignis Scientia", "value": 4670}, {"from": "Clash of the Eikons", "label": "6.19", "title": "combo_ct:519, comboWR:59.34, combo+-:6.19, AB_AveWR:53.15", "to": "Qiqirn Merchant", "value": 519}, {"from": "Clash of the Eikons", "label": "4.01", "title": "combo_ct:1838, comboWR:61.21, combo+-:4.01, AB_AveWR:57.2", "to": "Summon: Fenrir", "value": 1838}, {"from": "Clash of the Eikons", "label": "4.49", "title": "combo_ct:1589, comboWR:60.54, combo+-:4.49, AB_AveWR:56.05", "to": "Vanille, Cheerful l\u0027Cie", "value": 1589}, {"from": "Coliseum Behemoth", "label": "4.34", "title": "combo_ct:1550, comboWR:59.94, combo+-:4.34, AB_AveWR:55.6", "to": "Airship Crash", "value": 1550}, {"from": "Coliseum Behemoth", "label": "4.0", "title": "combo_ct:5234, comboWR:61.0, combo+-:4.0, AB_AveWR:57.0", "to": "Balamb T-Rexaur", "value": 5234}, {"from": "Coliseum Behemoth", "label": "3.59", "title": "combo_ct:1319, comboWR:59.59, combo+-:3.59, AB_AveWR:56.0", "to": "Commune with Beavers", "value": 1319}, {"from": "Coliseum Behemoth", "label": "4.21", "title": "combo_ct:1244, comboWR:60.61, combo+-:4.21, AB_AveWR:56.4", "to": "Diamond Weapon", "value": 1244}, {"from": "Coliseum Behemoth", "label": "4.3", "title": "combo_ct:5344, comboWR:60.95, combo+-:4.3, AB_AveWR:56.65", "to": "Goobbue Gardener", "value": 5344}, {"from": "Coliseum Behemoth", "label": "4.51", "title": "combo_ct:3813, comboWR:60.66, combo+-:4.51, AB_AveWR:56.15", "to": "Prishe\u0027s Wanderings", "value": 3813}, {"from": "Coliseum Behemoth", "label": "4.73", "title": "combo_ct:1331, comboWR:60.33, combo+-:4.73, AB_AveWR:55.6", "to": "Reach the Horizon", "value": 1331}, {"from": "Coliseum Behemoth", "label": "3.75", "title": "combo_ct:2285, comboWR:62.8, combo+-:3.75, AB_AveWR:59.05", "to": "Sazh\u0027s Chocobo", "value": 2285}, {"from": "Coliseum Behemoth", "label": "7.0", "title": "combo_ct:2931, comboWR:66.5, combo+-:7.0, AB_AveWR:59.5", "to": "Summon: Fenrir", "value": 2931}, {"from": "Coliseum Behemoth", "label": "3.49", "title": "combo_ct:2597, comboWR:61.84, combo+-:3.49, AB_AveWR:58.35", "to": "Torgal, A Fine Hound", "value": 2597}, {"from": "Coliseum Behemoth", "label": "4.24", "title": "combo_ct:6437, comboWR:62.59, combo+-:4.24, AB_AveWR:58.35", "to": "Town Greeter", "value": 6437}, {"from": "Coliseum Behemoth", "label": "3.54", "title": "combo_ct:2805, comboWR:61.89, combo+-:3.54, AB_AveWR:58.35", "to": "Vanille, Cheerful l\u0027Cie", "value": 2805}, {"from": "Coliseum Behemoth", "label": "5.64", "title": "combo_ct:2252, comboWR:63.99, combo+-:5.64, AB_AveWR:58.35", "to": "Ignis Scientia", "value": 2252}, {"from": "Coliseum Behemoth", "label": "3.45", "title": "combo_ct:1870, comboWR:61.6, combo+-:3.45, AB_AveWR:58.15", "to": "Omega, Heartless Evolution", "value": 1870}, {"from": "Gran Pulse Ochu", "label": "5.41", "title": "combo_ct:1885, comboWR:59.31, combo+-:5.41, AB_AveWR:53.9", "to": "Qiqirn Merchant", "value": 1885}, {"from": "Gran Pulse Ochu", "label": "3.02", "title": "combo_ct:4509, comboWR:60.97, combo+-:3.02, AB_AveWR:57.95", "to": "Summon: Fenrir", "value": 4509}, {"from": "Gran Pulse Ochu", "label": "4.51", "title": "combo_ct:4696, comboWR:61.31, combo+-:4.51, AB_AveWR:56.8", "to": "Vanille, Cheerful l\u0027Cie", "value": 4696}, {"from": "Gran Pulse Ochu", "label": "4.36", "title": "combo_ct:3130, comboWR:60.96, combo+-:4.36, AB_AveWR:56.6", "to": "Omega, Heartless Evolution", "value": 3130}, {"from": "Rydia\u0027s Return", "label": "3.96", "title": "combo_ct:591, comboWR:57.36, combo+-:3.96, AB_AveWR:53.4", "to": "Commune with Beavers", "value": 591}, {"from": "Rydia\u0027s Return", "label": "3.34", "title": "combo_ct:2273, comboWR:58.69, combo+-:3.34, AB_AveWR:55.35", "to": "Summon: Fat Chocobo", "value": 2273}, {"from": "Rydia\u0027s Return", "label": "4.18", "title": "combo_ct:1143, comboWR:59.93, combo+-:4.18, AB_AveWR:55.75", "to": "Torgal, A Fine Hound", "value": 1143}, {"from": "Rydia\u0027s Return", "label": "4.15", "title": "combo_ct:2661, comboWR:59.9, combo+-:4.15, AB_AveWR:55.75", "to": "Town Greeter", "value": 2661}, {"from": "Rydia\u0027s Return", "label": "4.23", "title": "combo_ct:1097, comboWR:59.98, combo+-:4.23, AB_AveWR:55.75", "to": "Vanille, Cheerful l\u0027Cie", "value": 1097}, {"from": "Rydia\u0027s Return", "label": "3.1", "title": "combo_ct:751, comboWR:58.85, combo+-:3.1, AB_AveWR:55.75", "to": "Ignis Scientia", "value": 751}, {"from": "Sazh\u0027s Chocobo", "label": "3.85", "title": "combo_ct:585, comboWR:62.05, combo+-:3.85, AB_AveWR:58.2", "to": "Summon: Shiva", "value": 585}, {"from": "Sazh\u0027s Chocobo", "label": "3.33", "title": "combo_ct:1431, comboWR:59.68, combo+-:3.33, AB_AveWR:56.35", "to": "Airship Crash", "value": 1431}, {"from": "Sazh\u0027s Chocobo", "label": "4.24", "title": "combo_ct:1157, comboWR:60.59, combo+-:4.24, AB_AveWR:56.35", "to": "Reach the Horizon", "value": 1157}, {"from": "Sazh\u0027s Chocobo", "label": "3.53", "title": "combo_ct:5497, comboWR:62.23, combo+-:3.53, AB_AveWR:58.7", "to": "Summon: Fat Chocobo", "value": 5497}, {"from": "Sazh\u0027s Chocobo", "label": "3.35", "title": "combo_ct:2607, comboWR:63.6, combo+-:3.35, AB_AveWR:60.25", "to": "Summon: Fenrir", "value": 2607}, {"from": "Sazh\u0027s Chocobo", "label": "3.4", "title": "combo_ct:5518, comboWR:62.5, combo+-:3.4, AB_AveWR:59.1", "to": "Town Greeter", "value": 5518}, {"from": "Sazh\u0027s Chocobo", "label": "3.74", "title": "combo_ct:2411, comboWR:62.84, combo+-:3.74, AB_AveWR:59.1", "to": "Vanille, Cheerful l\u0027Cie", "value": 2411}, {"from": "Sazh\u0027s Chocobo", "label": "4.03", "title": "combo_ct:1942, comboWR:63.13, combo+-:4.03, AB_AveWR:59.1", "to": "Ignis Scientia", "value": 1942}, {"from": "Sazh\u0027s Chocobo", "label": "4.02", "title": "combo_ct:1734, comboWR:62.92, combo+-:4.02, AB_AveWR:58.9", "to": "Omega, Heartless Evolution", "value": 1734}, {"from": "Summon: Fenrir", "label": "5.24", "title": "combo_ct:1325, comboWR:61.89, combo+-:5.24, AB_AveWR:56.65", "to": "Qiqirn Merchant", "value": 1325}, {"from": "Summon: Fenrir", "label": "3.09", "title": "combo_ct:663, comboWR:61.24, combo+-:3.09, AB_AveWR:58.15", "to": "Relm\u0027s Sketching", "value": 663}, {"from": "Summon: Fenrir", "label": "5.06", "title": "combo_ct:937, comboWR:63.71, combo+-:5.06, AB_AveWR:58.65", "to": "Summon: Shiva", "value": 937}, {"from": "Summon: Fenrir", "label": "3.17", "title": "combo_ct:1846, comboWR:59.97, combo+-:3.17, AB_AveWR:56.8", "to": "Airship Crash", "value": 1846}, {"from": "Summon: Fenrir", "label": "4.36", "title": "combo_ct:6549, comboWR:62.56, combo+-:4.36, AB_AveWR:58.2", "to": "Balamb T-Rexaur", "value": 6549}, {"from": "Summon: Fenrir", "label": "4.63", "title": "combo_ct:1223, comboWR:60.83, combo+-:4.63, AB_AveWR:56.2", "to": "Chocobo Racetrack", "value": 1223}, {"from": "Summon: Fenrir", "label": "3.72", "title": "combo_ct:1359, comboWR:61.52, combo+-:3.72, AB_AveWR:57.8", "to": "Ride the Shoopuf", "value": 1359}, {"from": "Summon: Fenrir", "label": "4.41", "title": "combo_ct:6753, comboWR:63.56, combo+-:4.41, AB_AveWR:59.15", "to": "Summon: Fat Chocobo", "value": 6753}, {"from": "Summon: Fenrir", "label": "3.94", "title": "combo_ct:7732, comboWR:63.49, combo+-:3.94, AB_AveWR:59.55", "to": "Town Greeter", "value": 7732}, {"from": "Summon: Fenrir", "label": "5.15", "title": "combo_ct:3337, comboWR:64.7, combo+-:5.15, AB_AveWR:59.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 3337}, {"from": "Summon: Fenrir", "label": "3.36", "title": "combo_ct:2704, comboWR:62.91, combo+-:3.36, AB_AveWR:59.55", "to": "Ignis Scientia", "value": 2704}, {"from": "Summon: Fenrir", "label": "6.46", "title": "combo_ct:2659, comboWR:65.81, combo+-:6.46, AB_AveWR:59.35", "to": "Omega, Heartless Evolution", "value": 2659}, {"from": "Omega, Heartless Evolution", "label": "5.12", "title": "combo_ct:2779, comboWR:60.42, combo+-:5.12, AB_AveWR:55.3", "to": "Qiqirn Merchant", "value": 2779}, {"from": "Omega, Heartless Evolution", "label": "5.47", "title": "combo_ct:994, comboWR:62.27, combo+-:5.47, AB_AveWR:56.8", "to": "Relm\u0027s Sketching", "value": 994}, {"from": "Omega, Heartless Evolution", "label": "4.15", "title": "combo_ct:1198, comboWR:59.6, combo+-:4.15, AB_AveWR:55.45", "to": "Airship Crash", "value": 1198}, {"from": "Omega, Heartless Evolution", "label": "3.83", "title": "combo_ct:3965, comboWR:60.68, combo+-:3.83, AB_AveWR:56.85", "to": "Balamb T-Rexaur", "value": 3965}, {"from": "Omega, Heartless Evolution", "label": "4.37", "title": "combo_ct:1247, comboWR:60.22, combo+-:4.37, AB_AveWR:55.85", "to": "Commune with Beavers", "value": 1247}, {"from": "Omega, Heartless Evolution", "label": "4.12", "title": "combo_ct:4170, comboWR:60.62, combo+-:4.12, AB_AveWR:56.5", "to": "Goobbue Gardener", "value": 4170}, {"from": "Omega, Heartless Evolution", "label": "5.27", "title": "combo_ct:3514, comboWR:61.27, combo+-:5.27, AB_AveWR:56.0", "to": "Prishe\u0027s Wanderings", "value": 3514}, {"from": "Omega, Heartless Evolution", "label": "10.03", "title": "combo_ct:1657, comboWR:65.48, combo+-:10.03, AB_AveWR:55.45", "to": "Reach the Horizon", "value": 1657}, {"from": "Omega, Heartless Evolution", "label": "3.45", "title": "combo_ct:3608, comboWR:61.25, combo+-:3.45, AB_AveWR:57.8", "to": "Summon: Fat Chocobo", "value": 3608}, {"from": "Omega, Heartless Evolution", "label": "4.31", "title": "combo_ct:2195, comboWR:62.51, combo+-:4.31, AB_AveWR:58.2", "to": "Torgal, A Fine Hound", "value": 2195}, {"from": "Omega, Heartless Evolution", "label": "5.26", "title": "combo_ct:5783, comboWR:63.46, combo+-:5.26, AB_AveWR:58.2", "to": "Town Greeter", "value": 5783}, {"from": "Omega, Heartless Evolution", "label": "4.69", "title": "combo_ct:2253, comboWR:62.89, combo+-:4.69, AB_AveWR:58.2", "to": "Vanille, Cheerful l\u0027Cie", "value": 2253}, {"from": "Omega, Heartless Evolution", "label": "6.48", "title": "combo_ct:4102, comboWR:64.68, combo+-:6.48, AB_AveWR:58.2", "to": "Ignis Scientia", "value": 4102}, {"from": "Summon: Shiva", "label": "3.12", "title": "combo_ct:2418, comboWR:59.22, combo+-:3.12, AB_AveWR:56.1", "to": "Relm\u0027s Sketching", "value": 2418}, {"from": "Summon: Shiva", "label": "3.17", "title": "combo_ct:1856, comboWR:60.67, combo+-:3.17, AB_AveWR:57.5", "to": "Town Greeter", "value": 1856}, {"from": "Summon: Shiva", "label": "3.52", "title": "combo_ct:785, comboWR:61.02, combo+-:3.52, AB_AveWR:57.5", "to": "Vanille, Cheerful l\u0027Cie", "value": 785}, {"from": "Airship Crash", "label": "3.07", "title": "combo_ct:842, comboWR:55.82, combo+-:3.07, AB_AveWR:52.75", "to": "Qiqirn Merchant", "value": 842}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.4", "title": "combo_ct:6318, comboWR:60.45, combo+-:3.4, AB_AveWR:57.05", "to": "Balamb T-Rexaur", "value": 6318}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.13", "title": "combo_ct:1296, comboWR:59.03, combo+-:3.13, AB_AveWR:55.9", "to": "Blitzball Shot", "value": 1296}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.24", "title": "combo_ct:1501, comboWR:59.29, combo+-:3.24, AB_AveWR:56.05", "to": "Commune with Beavers", "value": 1501}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.71", "title": "combo_ct:5833, comboWR:60.41, combo+-:3.71, AB_AveWR:56.7", "to": "Goobbue Gardener", "value": 5833}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "5.0", "title": "combo_ct:3134, comboWR:63.4, combo+-:5.0, AB_AveWR:58.4", "to": "Torgal, A Fine Hound", "value": 3134}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.7", "title": "combo_ct:7965, comboWR:63.1, combo+-:4.7, AB_AveWR:58.4", "to": "Town Greeter", "value": 7965}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.15", "title": "combo_ct:2590, comboWR:62.55, combo+-:4.15, AB_AveWR:58.4", "to": "Ignis Scientia", "value": 2590}, {"from": "Relm\u0027s Sketching", "label": "3.67", "title": "combo_ct:560, comboWR:57.32, combo+-:3.67, AB_AveWR:53.65", "to": "The Prima Vista", "value": 560}, {"from": "Relm\u0027s Sketching", "label": "3.13", "title": "combo_ct:4831, comboWR:58.68, combo+-:3.13, AB_AveWR:55.55", "to": "Retrieve the Esper", "value": 4831}, {"from": "Relm\u0027s Sketching", "label": "3.07", "title": "combo_ct:1187, comboWR:60.07, combo+-:3.07, AB_AveWR:57.0", "to": "Ignis Scientia", "value": 1187}, {"from": "Reach the Horizon", "label": "3.94", "title": "combo_ct:1113, comboWR:56.69, combo+-:3.94, AB_AveWR:52.75", "to": "Qiqirn Merchant", "value": 1113}, {"from": "Reach the Horizon", "label": "3.19", "title": "combo_ct:910, comboWR:55.49, combo+-:3.19, AB_AveWR:52.3", "to": "Chocobo Racetrack", "value": 910}, {"from": "Prishe\u0027s Wanderings", "label": "3.09", "title": "combo_ct:9155, comboWR:59.29, combo+-:3.09, AB_AveWR:56.2", "to": "Town Greeter", "value": 9155}, {"from": "Ignis Scientia", "label": "4.08", "title": "combo_ct:2014, comboWR:60.03, combo+-:4.08, AB_AveWR:55.95", "to": "Ice Flan", "value": 2014}, {"from": "Ignis Scientia", "label": "3.34", "title": "combo_ct:2801, comboWR:58.84, combo+-:3.34, AB_AveWR:55.5", "to": "Qiqirn Merchant", "value": 2801}, {"from": "Ignis Scientia", "label": "4.19", "title": "combo_ct:4848, comboWR:61.24, combo+-:4.19, AB_AveWR:57.05", "to": "Balamb T-Rexaur", "value": 4848}, {"from": "Ignis Scientia", "label": "4.04", "title": "combo_ct:985, comboWR:59.09, combo+-:4.04, AB_AveWR:55.05", "to": "Chocobo Racetrack", "value": 985}, {"from": "Ignis Scientia", "label": "3.51", "title": "combo_ct:1099, comboWR:59.96, combo+-:3.51, AB_AveWR:56.45", "to": "Diamond Weapon", "value": 1099}, {"from": "Town Greeter", "label": "5.24", "title": "combo_ct:4805, comboWR:61.69, combo+-:5.24, AB_AveWR:56.45", "to": "Diamond Weapon", "value": 4805}, {"from": "Town Greeter", "label": "4.31", "title": "combo_ct:2569, comboWR:60.96, combo+-:4.31, AB_AveWR:56.65", "to": "Ride the Shoopuf", "value": 2569}, {"from": "Balamb T-Rexaur", "label": "3.04", "title": "combo_ct:3481, comboWR:58.14, combo+-:3.04, AB_AveWR:55.1", "to": "Diamond Weapon", "value": 3481}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

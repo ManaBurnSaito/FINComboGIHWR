@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Adelbert Steiner">Adelbert Steiner</option>
+                                
+                                    <option value="Delivery Moogle">Delivery Moogle</option>
+                                
+                                    <option value="Dragoon's Lance">Dragoon's Lance</option>
+                                
+                                    <option value="Paladin's Arms">Paladin's Arms</option>
+                                
+                                    <option value="Restoration Magic">Restoration Magic</option>
+                                
+                                    <option value="Slash of Light">Slash of Light</option>
+                                
+                                    <option value="White Auracite">White Auracite</option>
+                                
+                                    <option value="White Mage's Staff">White Mage's Staff</option>
+                                
+                                    <option value="Bard's Bow">Bard's Bow</option>
+                                
+                                    <option value="Rinoa Heartilly">Rinoa Heartilly</option>
+                                
+                                    <option value="Loporrit Scout">Loporrit Scout</option>
+                                
+                                    <option value="Battle Menu">Battle Menu</option>
+                                
+                                    <option value="Ambrosia Whiteheart">Ambrosia Whiteheart</option>
+                                
+                                    <option value="Summon: Primal Garuda">Summon: Primal Garuda</option>
+                                
+                                    <option value="Zack Fair">Zack Fair</option>
+                                
+                                    <option value="Ashe, Princess of Dalmasca">Ashe, Princess of Dalmasca</option>
+                                
+                                    <option value="G'raha Tia">G'raha Tia</option>
+                                
+                                    <option value="Weapons Vendor">Weapons Vendor</option>
+                                
+                                    <option value="Summon: Fenrir">Summon: Fenrir</option>
+                                
+                                    <option value="The Crystal's Chosen">The Crystal's Chosen</option>
+                                
+                                    <option value="Goobbue Gardener">Goobbue Gardener</option>
+                                
+                                    <option value="Garnet, Princess of Alexandria">Garnet, Princess of Alexandria</option>
+                                
+                                    <option value="Gaelicat">Gaelicat</option>
+                                
+                                    <option value="Magitek Infantry">Magitek Infantry</option>
+                                
+                                    <option value="You're Not Alone">You're Not Alone</option>
+                                
+                                    <option value="Chocobo Kick">Chocobo Kick</option>
+                                
+                                    <option value="Magitek Armor">Magitek Armor</option>
+                                
+                                    <option value="Summon: Fat Chocobo">Summon: Fat Chocobo</option>
+                                
+                                    <option value="Torgal, A Fine Hound">Torgal, A Fine Hound</option>
+                                
+                                    <option value="Coliseum Behemoth">Coliseum Behemoth</option>
+                                
+                                    <option value="Commune with Beavers">Commune with Beavers</option>
+                                
+                                    <option value="Blitzball Shot">Blitzball Shot</option>
+                                
+                                    <option value="Airship Crash">Airship Crash</option>
+                                
+                                    <option value="Sazh's Chocobo">Sazh's Chocobo</option>
+                                
+                                    <option value="Balamb T-Rexaur">Balamb T-Rexaur</option>
+                                
+                                    <option value="Diamond Weapon">Diamond Weapon</option>
+                                
+                                    <option value="Vanille, Cheerful l'Cie">Vanille, Cheerful l'Cie</option>
+                                
+                                    <option value="Chocobo Racetrack">Chocobo Racetrack</option>
+                                
+                                    <option value="Town Greeter">Town Greeter</option>
+                                
+                                    <option value="Reach the Horizon">Reach the Horizon</option>
+                                
+                                    <option value="Clash of the Eikons">Clash of the Eikons</option>
+                                
+                                    <option value="Prishe's Wanderings">Prishe's Wanderings</option>
+                                
+                                    <option value="Rydia's Return">Rydia's Return</option>
+                                
+                                    <option value="Gran Pulse Ochu">Gran Pulse Ochu</option>
+                                
+                                    <option value="Ride the Shoopuf">Ride the Shoopuf</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Adelbert Steiner", "image": "img/Adelbert_Steiner.png", "label": "Adelbert Steiner", "shape": "image", "title": "GIHWR:58.0, avg_pick:3.87", "url": "WG_combo_network_Adelbert_Steiner"}, {"color": "#97c2fc", "id": "Delivery Moogle", "image": "img/Delivery_Moogle.png", "label": "Delivery Moogle", "shape": "image", "title": "GIHWR:59.6, avg_pick:4.34", "url": "WG_combo_network_Delivery_Moogle"}, {"color": "#97c2fc", "id": "Dragoon\u0027s Lance", "image": "img/Dragoon\u0027s_Lance.png", "label": "Dragoon\u0027s Lance", "shape": "image", "title": "GIHWR:61.4, avg_pick:2.97", "url": "WG_combo_network_Dragoon\u0027s_Lance"}, {"color": "#97c2fc", "id": "Paladin\u0027s Arms", "image": "img/Paladin\u0027s_Arms.png", "label": "Paladin\u0027s Arms", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.99", "url": "WG_combo_network_Paladin\u0027s_Arms"}, {"color": "#97c2fc", "id": "Restoration Magic", "image": "img/Restoration_Magic.png", "label": "Restoration Magic", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.9", "url": "WG_combo_network_Restoration_Magic"}, {"color": "#97c2fc", "id": "Slash of Light", "image": "img/Slash_of_Light.png", "label": "Slash of Light", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.12", "url": "WG_combo_network_Slash_of_Light"}, {"color": "#97c2fc", "id": "White Auracite", "image": "img/White_Auracite.png", "label": "White Auracite", "shape": "image", "title": "GIHWR:59.1, avg_pick:3.91", "url": "WG_combo_network_White_Auracite"}, {"color": "#97c2fc", "id": "White Mage\u0027s Staff", "image": "img/White_Mage\u0027s_Staff.png", "label": "White Mage\u0027s Staff", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.6", "url": "WG_combo_network_White_Mage\u0027s_Staff"}, {"color": "#97c2fc", "id": "Bard\u0027s Bow", "image": "img/Bard\u0027s_Bow.png", "label": "Bard\u0027s Bow", "shape": "image", "title": "GIHWR:55.1, avg_pick:8.7", "url": "WG_combo_network_Bard\u0027s_Bow"}, {"color": "#97c2fc", "id": "Rinoa Heartilly", "image": "img/Rinoa_Heartilly.png", "label": "Rinoa Heartilly", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.55", "url": "WG_combo_network_Rinoa_Heartilly"}, {"color": "#97c2fc", "id": "Loporrit Scout", "image": "img/Loporrit_Scout.png", "label": "Loporrit Scout", "shape": "image", "title": "GIHWR:48.7, avg_pick:12.05", "url": "WG_combo_network_Loporrit_Scout"}, {"color": "#97c2fc", "id": "Battle Menu", "image": "img/Battle_Menu.png", "label": "Battle Menu", "shape": "image", "title": "GIHWR:58.1, avg_pick:3.96", "url": "WG_combo_network_Battle_Menu"}, {"color": "#97c2fc", "id": "Ambrosia Whiteheart", "image": "img/Ambrosia_Whiteheart.png", "label": "Ambrosia Whiteheart", "shape": "image", "title": "GIHWR:56.3, avg_pick:4.36", "url": "WG_combo_network_Ambrosia_Whiteheart"}, {"color": "#97c2fc", "id": "Summon: Primal Garuda", "image": "img/Summon_Primal_Garuda.png", "label": "Summon: Primal Garuda", "shape": "image", "title": "GIHWR:56.0, avg_pick:4.68", "url": "WG_combo_network_Summon:_Primal_Garuda"}, {"color": "#97c2fc", "id": "Zack Fair", "image": "img/Zack_Fair.png", "label": "Zack Fair", "shape": "image", "title": "GIHWR:57.4, avg_pick:4.57", "url": "WG_combo_network_Zack_Fair"}, {"color": "#97c2fc", "id": "Ashe, Princess of Dalmasca", "image": "img/Ashe,_Princess_of_Dalmasca.png", "label": "Ashe, Princess of Dalmasca", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.76", "url": "WG_combo_network_Ashe,_Princess_of_Dalmasca"}, {"color": "#97c2fc", "id": "G\u0027raha Tia", "image": "img/G\u0027raha_Tia.png", "label": "G\u0027raha Tia", "shape": "image", "title": "GIHWR:53.7, avg_pick:4.89", "url": "WG_combo_network_G\u0027raha_Tia"}, {"color": "#97c2fc", "id": "Weapons Vendor", "image": "img/Weapons_Vendor.png", "label": "Weapons Vendor", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.67", "url": "WG_combo_network_Weapons_Vendor"}, {"color": "#97c2fc", "id": "Summon: Fenrir", "image": "img/Summon_Fenrir.png", "label": "Summon: Fenrir", "shape": "image", "title": "GIHWR:60.7, avg_pick:2.67", "url": "WG_combo_network_Summon:_Fenrir"}, {"color": "#97c2fc", "id": "The Crystal\u0027s Chosen", "image": "img/The_Crystal\u0027s_Chosen.png", "label": "The Crystal\u0027s Chosen", "shape": "image", "title": "GIHWR:56.4, avg_pick:6.04", "url": "WG_combo_network_The_Crystal\u0027s_Chosen"}, {"color": "#97c2fc", "id": "Goobbue Gardener", "image": "img/Goobbue_Gardener.png", "label": "Goobbue Gardener", "shape": "image", "title": "GIHWR:55.0, avg_pick:6.53", "url": "WG_combo_network_Goobbue_Gardener"}, {"color": "#97c2fc", "id": "Garnet, Princess of Alexandria", "image": "img/Garnet,_Princess_of_Alexandria.png", "label": "Garnet, Princess of Alexandria", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.83", "url": "WG_combo_network_Garnet,_Princess_of_Alexandria"}, {"color": "#97c2fc", "id": "Gaelicat", "image": "img/Gaelicat.png", "label": "Gaelicat", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.15", "url": "WG_combo_network_Gaelicat"}, {"color": "#97c2fc", "id": "Magitek Infantry", "image": "img/Magitek_Infantry.png", "label": "Magitek Infantry", "shape": "image", "title": "GIHWR:57.7, avg_pick:6.3", "url": "WG_combo_network_Magitek_Infantry"}, {"color": "#97c2fc", "id": "You\u0027re Not Alone", "image": "img/You\u0027re_Not_Alone.png", "label": "You\u0027re Not Alone", "shape": "image", "title": "GIHWR:55.9, avg_pick:9.81", "url": "WG_combo_network_You\u0027re_Not_Alone"}, {"color": "#97c2fc", "id": "Chocobo Kick", "image": "img/Chocobo_Kick.png", "label": "Chocobo Kick", "shape": "image", "title": "GIHWR:57.3, avg_pick:5.35", "url": "WG_combo_network_Chocobo_Kick"}, {"color": "#97c2fc", "id": "Magitek Armor", "image": "img/Magitek_Armor.png", "label": "Magitek Armor", "shape": "image", "title": "GIHWR:57.1, avg_pick:5.71", "url": "WG_combo_network_Magitek_Armor"}, {"color": "#97c2fc", "id": "Summon: Fat Chocobo", "image": "img/Summon_Fat_Chocobo.png", "label": "Summon: Fat Chocobo", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.47", "url": "WG_combo_network_Summon:_Fat_Chocobo"}, {"color": "#97c2fc", "id": "Torgal, A Fine Hound", "image": "img/Torgal,_A_Fine_Hound.png", "label": "Torgal, A Fine Hound", "shape": "image", "title": "GIHWR:58.4, avg_pick:3.19", "url": "WG_combo_network_Torgal,_A_Fine_Hound"}, {"color": "#97c2fc", "id": "Coliseum Behemoth", "image": "img/Coliseum_Behemoth.png", "label": "Coliseum Behemoth", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.81", "url": "WG_combo_network_Coliseum_Behemoth"}, {"color": "#97c2fc", "id": "Commune with Beavers", "image": "img/Commune_with_Beavers.png", "label": "Commune with Beavers", "shape": "image", "title": "GIHWR:53.7, avg_pick:11.01", "url": "WG_combo_network_Commune_with_Beavers"}, {"color": "#97c2fc", "id": "Blitzball Shot", "image": "img/Blitzball_Shot.png", "label": "Blitzball Shot", "shape": "image", "title": "GIHWR:53.4, avg_pick:11.01", "url": "WG_combo_network_Blitzball_Shot"}, {"color": "#97c2fc", "id": "Airship Crash", "image": "img/Airship_Crash.png", "label": "Airship Crash", "shape": "image", "title": "GIHWR:52.9, avg_pick:10.86", "url": "WG_combo_network_Airship_Crash"}, {"color": "#97c2fc", "id": "Sazh\u0027s Chocobo", "image": "img/Sazh\u0027s_Chocobo.png", "label": "Sazh\u0027s Chocobo", "shape": "image", "title": "GIHWR:59.8, avg_pick:3.09", "url": "WG_combo_network_Sazh\u0027s_Chocobo"}, {"color": "#97c2fc", "id": "Balamb T-Rexaur", "image": "img/Balamb_T-Rexaur.png", "label": "Balamb T-Rexaur", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.41", "url": "WG_combo_network_Balamb_T-Rexaur"}, {"color": "#97c2fc", "id": "Diamond Weapon", "image": "img/Diamond_Weapon.png", "label": "Diamond Weapon", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.29", "url": "WG_combo_network_Diamond_Weapon"}, {"color": "#97c2fc", "id": "Vanille, Cheerful l\u0027Cie", "image": "img/Vanille,_Cheerful_l\u0027Cie.png", "label": "Vanille, Cheerful l\u0027Cie", "shape": "image", "title": "GIHWR:58.4, avg_pick:4.01", "url": "WG_combo_network_Vanille,_Cheerful_l\u0027Cie"}, {"color": "#97c2fc", "id": "Chocobo Racetrack", "image": "img/Chocobo_Racetrack.png", "label": "Chocobo Racetrack", "shape": "image", "title": "GIHWR:51.7, avg_pick:6.02", "url": "WG_combo_network_Chocobo_Racetrack"}, {"color": "#97c2fc", "id": "Town Greeter", "image": "img/Town_Greeter.png", "label": "Town Greeter", "shape": "image", "title": "GIHWR:58.4, avg_pick:6.5", "url": "WG_combo_network_Town_Greeter"}, {"color": "#97c2fc", "id": "Reach the Horizon", "image": "img/Reach_the_Horizon.png", "label": "Reach the Horizon", "shape": "image", "title": "GIHWR:52.9, avg_pick:6.97", "url": "WG_combo_network_Reach_the_Horizon"}, {"color": "#97c2fc", "id": "Clash of the Eikons", "image": "img/Clash_of_the_Eikons.png", "label": "Clash of the Eikons", "shape": "image", "title": "GIHWR:53.7, avg_pick:6.96", "url": "WG_combo_network_Clash_of_the_Eikons"}, {"color": "#97c2fc", "id": "Prishe\u0027s Wanderings", "image": "img/Prishe\u0027s_Wanderings.png", "label": "Prishe\u0027s Wanderings", "shape": "image", "title": "GIHWR:54.0, avg_pick:7.79", "url": "WG_combo_network_Prishe\u0027s_Wanderings"}, {"color": "#97c2fc", "id": "Rydia\u0027s Return", "image": "img/Rydia\u0027s_Return.png", "label": "Rydia\u0027s Return", "shape": "image", "title": "GIHWR:53.1, avg_pick:8.78", "url": "WG_combo_network_Rydia\u0027s_Return"}, {"color": "#97c2fc", "id": "Gran Pulse Ochu", "image": "img/Gran_Pulse_Ochu.png", "label": "Gran Pulse Ochu", "shape": "image", "title": "GIHWR:55.2, avg_pick:8.66", "url": "WG_combo_network_Gran_Pulse_Ochu"}, {"color": "#97c2fc", "id": "Ride the Shoopuf", "image": "img/Ride_the_Shoopuf.png", "label": "Ride the Shoopuf", "shape": "image", "title": "GIHWR:54.9, avg_pick:5.31", "url": "WG_combo_network_Ride_the_Shoopuf"}]);
+                  edges = new vis.DataSet([{"from": "Adelbert Steiner", "label": "6.0", "title": "combo_ct:2767, comboWR:64.8, combo+-:6.0, AB_AveWR:58.8", "to": "Delivery Moogle", "value": 2767}, {"from": "Adelbert Steiner", "label": "8.29", "title": "combo_ct:2793, comboWR:67.99, combo+-:8.29, AB_AveWR:59.7", "to": "Dragoon\u0027s Lance", "value": 2793}, {"from": "Adelbert Steiner", "label": "3.38", "title": "combo_ct:5491, comboWR:60.23, combo+-:3.38, AB_AveWR:56.85", "to": "Paladin\u0027s Arms", "value": 5491}, {"from": "Adelbert Steiner", "label": "3.88", "title": "combo_ct:1336, comboWR:61.23, combo+-:3.88, AB_AveWR:57.35", "to": "Restoration Magic", "value": 1336}, {"from": "Adelbert Steiner", "label": "3.31", "title": "combo_ct:4974, comboWR:60.41, combo+-:3.31, AB_AveWR:57.1", "to": "Slash of Light", "value": 4974}, {"from": "Adelbert Steiner", "label": "3.37", "title": "combo_ct:5354, comboWR:61.92, combo+-:3.37, AB_AveWR:58.55", "to": "White Auracite", "value": 5354}, {"from": "Adelbert Steiner", "label": "4.77", "title": "combo_ct:6377, comboWR:62.57, combo+-:4.77, AB_AveWR:57.8", "to": "White Mage\u0027s Staff", "value": 6377}, {"from": "Adelbert Steiner", "label": "4.26", "title": "combo_ct:745, comboWR:60.81, combo+-:4.26, AB_AveWR:56.55", "to": "Bard\u0027s Bow", "value": 745}, {"from": "Adelbert Steiner", "label": "4.48", "title": "combo_ct:689, comboWR:61.83, combo+-:4.48, AB_AveWR:57.35", "to": "Rinoa Heartilly", "value": 689}, {"from": "Delivery Moogle", "label": "3.65", "title": "combo_ct:2613, comboWR:62.5, combo+-:3.65, AB_AveWR:58.85", "to": "Battle Menu", "value": 2613}, {"from": "Delivery Moogle", "label": "4.42", "title": "combo_ct:5611, comboWR:62.32, combo+-:4.42, AB_AveWR:57.9", "to": "Gaelicat", "value": 5611}, {"from": "Delivery Moogle", "label": "3.36", "title": "combo_ct:5341, comboWR:62.01, combo+-:3.36, AB_AveWR:58.65", "to": "Magitek Infantry", "value": 5341}, {"from": "Delivery Moogle", "label": "4.22", "title": "combo_ct:1496, comboWR:62.37, combo+-:4.22, AB_AveWR:58.15", "to": "Restoration Magic", "value": 1496}, {"from": "Delivery Moogle", "label": "4.7", "title": "combo_ct:5227, comboWR:62.6, combo+-:4.7, AB_AveWR:57.9", "to": "Slash of Light", "value": 5227}, {"from": "Delivery Moogle", "label": "3.79", "title": "combo_ct:6349, comboWR:63.14, combo+-:3.79, AB_AveWR:59.35", "to": "White Auracite", "value": 6349}, {"from": "Delivery Moogle", "label": "3.31", "title": "combo_ct:6987, comboWR:61.91, combo+-:3.31, AB_AveWR:58.6", "to": "White Mage\u0027s Staff", "value": 6987}, {"from": "Delivery Moogle", "label": "3.11", "title": "combo_ct:3107, comboWR:60.86, combo+-:3.11, AB_AveWR:57.75", "to": "You\u0027re Not Alone", "value": 3107}, {"from": "Delivery Moogle", "label": "3.39", "title": "combo_ct:2312, comboWR:61.89, combo+-:3.39, AB_AveWR:58.5", "to": "Zack Fair", "value": 2312}, {"from": "Delivery Moogle", "label": "3.55", "title": "combo_ct:844, comboWR:60.9, combo+-:3.55, AB_AveWR:57.35", "to": "Bard\u0027s Bow", "value": 844}, {"from": "Delivery Moogle", "label": "5.24", "title": "combo_ct:807, comboWR:63.69, combo+-:5.24, AB_AveWR:58.45", "to": "Chocobo Kick", "value": 807}, {"from": "Delivery Moogle", "label": "4.28", "title": "combo_ct:748, comboWR:62.43, combo+-:4.28, AB_AveWR:58.15", "to": "Rinoa Heartilly", "value": 748}, {"from": "Dragoon\u0027s Lance", "label": "3.37", "title": "combo_ct:2499, comboWR:62.22, combo+-:3.37, AB_AveWR:58.85", "to": "Ambrosia Whiteheart", "value": 2499}, {"from": "Dragoon\u0027s Lance", "label": "3.04", "title": "combo_ct:1774, comboWR:60.99, combo+-:3.04, AB_AveWR:57.95", "to": "Ashe, Princess of Dalmasca", "value": 1774}, {"from": "Dragoon\u0027s Lance", "label": "4.4", "title": "combo_ct:5869, comboWR:63.2, combo+-:4.4, AB_AveWR:58.8", "to": "Gaelicat", "value": 5869}, {"from": "Dragoon\u0027s Lance", "label": "3.7", "title": "combo_ct:2715, comboWR:62.95, combo+-:3.7, AB_AveWR:59.25", "to": "Magitek Armor", "value": 2715}, {"from": "Dragoon\u0027s Lance", "label": "3.52", "title": "combo_ct:5167, comboWR:63.07, combo+-:3.52, AB_AveWR:59.55", "to": "Magitek Infantry", "value": 5167}, {"from": "Dragoon\u0027s Lance", "label": "3.64", "title": "combo_ct:1434, comboWR:62.69, combo+-:3.64, AB_AveWR:59.05", "to": "Restoration Magic", "value": 1434}, {"from": "Dragoon\u0027s Lance", "label": "5.71", "title": "combo_ct:5908, comboWR:64.51, combo+-:5.71, AB_AveWR:58.8", "to": "Slash of Light", "value": 5908}, {"from": "Dragoon\u0027s Lance", "label": "3.62", "title": "combo_ct:5499, comboWR:61.97, combo+-:3.62, AB_AveWR:58.35", "to": "Weapons Vendor", "value": 5499}, {"from": "Dragoon\u0027s Lance", "label": "4.42", "title": "combo_ct:6672, comboWR:64.67, combo+-:4.42, AB_AveWR:60.25", "to": "White Auracite", "value": 6672}, {"from": "Dragoon\u0027s Lance", "label": "3.25", "title": "combo_ct:6746, comboWR:62.75, combo+-:3.25, AB_AveWR:59.5", "to": "White Mage\u0027s Staff", "value": 6746}, {"from": "Dragoon\u0027s Lance", "label": "3.41", "title": "combo_ct:3653, comboWR:62.06, combo+-:3.41, AB_AveWR:58.65", "to": "You\u0027re Not Alone", "value": 3653}, {"from": "Dragoon\u0027s Lance", "label": "4.02", "title": "combo_ct:2430, comboWR:63.42, combo+-:4.02, AB_AveWR:59.4", "to": "Zack Fair", "value": 2430}, {"from": "Dragoon\u0027s Lance", "label": "3.02", "title": "combo_ct:994, comboWR:62.37, combo+-:3.02, AB_AveWR:59.35", "to": "Chocobo Kick", "value": 994}, {"from": "Dragoon\u0027s Lance", "label": "3.9", "title": "combo_ct:1131, comboWR:63.4, combo+-:3.9, AB_AveWR:59.5", "to": "Summon: Fat Chocobo", "value": 1131}, {"from": "Dragoon\u0027s Lance", "label": "5.06", "title": "combo_ct:697, comboWR:63.41, combo+-:5.06, AB_AveWR:58.35", "to": "Garnet, Princess of Alexandria", "value": 697}, {"from": "Dragoon\u0027s Lance", "label": "4.32", "title": "combo_ct:991, comboWR:63.37, combo+-:4.32, AB_AveWR:59.05", "to": "Rinoa Heartilly", "value": 991}, {"from": "Paladin\u0027s Arms", "label": "3.58", "title": "combo_ct:729, comboWR:60.63, combo+-:3.58, AB_AveWR:57.05", "to": "Torgal, A Fine Hound", "value": 729}, {"from": "Restoration Magic", "label": "3.11", "title": "combo_ct:809, comboWR:58.71, combo+-:3.11, AB_AveWR:55.6", "to": "Ashe, Princess of Dalmasca", "value": 809}, {"from": "Restoration Magic", "label": "3.04", "title": "combo_ct:2263, comboWR:59.04, combo+-:3.04, AB_AveWR:56.0", "to": "Weapons Vendor", "value": 2263}, {"from": "Restoration Magic", "label": "4.46", "title": "combo_ct:3366, comboWR:62.36, combo+-:4.46, AB_AveWR:57.9", "to": "White Auracite", "value": 3366}, {"from": "Restoration Magic", "label": "3.76", "title": "combo_ct:510, comboWR:59.61, combo+-:3.76, AB_AveWR:55.85", "to": "Goobbue Gardener", "value": 510}, {"from": "Restoration Magic", "label": "8.02", "title": "combo_ct:598, comboWR:64.72, combo+-:8.02, AB_AveWR:56.7", "to": "Rinoa Heartilly", "value": 598}, {"from": "Slash of Light", "label": "3.05", "title": "combo_ct:12735, comboWR:59.95, combo+-:3.05, AB_AveWR:56.9", "to": "White Mage\u0027s Staff", "value": 12735}, {"from": "White Auracite", "label": "3.58", "title": "combo_ct:5398, comboWR:61.28, combo+-:3.58, AB_AveWR:57.7", "to": "Ambrosia Whiteheart", "value": 5398}, {"from": "White Auracite", "label": "4.78", "title": "combo_ct:4510, comboWR:62.53, combo+-:4.78, AB_AveWR:57.75", "to": "The Crystal\u0027s Chosen", "value": 4510}, {"from": "White Auracite", "label": "3.83", "title": "combo_ct:11964, comboWR:61.48, combo+-:3.83, AB_AveWR:57.65", "to": "Gaelicat", "value": 11964}, {"from": "White Auracite", "label": "3.07", "title": "combo_ct:5781, comboWR:61.17, combo+-:3.07, AB_AveWR:58.1", "to": "Magitek Armor", "value": 5781}, {"from": "White Auracite", "label": "3.29", "title": "combo_ct:14817, comboWR:61.64, combo+-:3.29, AB_AveWR:58.35", "to": "White Mage\u0027s Staff", "value": 14817}, {"from": "White Auracite", "label": "3.71", "title": "combo_ct:838, comboWR:62.41, combo+-:3.71, AB_AveWR:58.7", "to": "Coliseum Behemoth", "value": 838}, {"from": "White Auracite", "label": "3.15", "title": "combo_ct:618, comboWR:59.55, combo+-:3.15, AB_AveWR:56.4", "to": "Commune with Beavers", "value": 618}, {"from": "White Mage\u0027s Staff", "label": "3.21", "title": "combo_ct:775, comboWR:58.71, combo+-:3.21, AB_AveWR:55.5", "to": "Blitzball Shot", "value": 775}, {"from": "Bard\u0027s Bow", "label": "4.9", "title": "combo_ct:710, comboWR:59.3, combo+-:4.9, AB_AveWR:54.4", "to": "G\u0027raha Tia", "value": 710}, {"from": "Rinoa Heartilly", "label": "4.97", "title": "combo_ct:1039, comboWR:62.37, combo+-:4.97, AB_AveWR:57.4", "to": "Battle Menu", "value": 1039}, {"from": "Rinoa Heartilly", "label": "3.65", "title": "combo_ct:2553, comboWR:59.85, combo+-:3.65, AB_AveWR:56.2", "to": "Balamb T-Rexaur", "value": 2553}, {"from": "Rinoa Heartilly", "label": "3.24", "title": "combo_ct:2930, comboWR:60.24, combo+-:3.24, AB_AveWR:57.0", "to": "Chocobo Kick", "value": 2930}, {"from": "Rinoa Heartilly", "label": "5.12", "title": "combo_ct:741, comboWR:60.32, combo+-:5.12, AB_AveWR:55.2", "to": "Commune with Beavers", "value": 741}, {"from": "Rinoa Heartilly", "label": "3.16", "title": "combo_ct:2513, comboWR:59.01, combo+-:3.16, AB_AveWR:55.85", "to": "Goobbue Gardener", "value": 2513}, {"from": "Rinoa Heartilly", "label": "5.25", "title": "combo_ct:635, comboWR:57.95, combo+-:5.25, AB_AveWR:52.7", "to": "Loporrit Scout", "value": 635}, {"from": "Rinoa Heartilly", "label": "3.18", "title": "combo_ct:526, comboWR:57.98, combo+-:3.18, AB_AveWR:54.8", "to": "Reach the Horizon", "value": 526}, {"from": "Rinoa Heartilly", "label": "5.86", "title": "combo_ct:1628, comboWR:64.56, combo+-:5.86, AB_AveWR:58.7", "to": "Summon: Fenrir", "value": 1628}, {"from": "Rinoa Heartilly", "label": "5.38", "title": "combo_ct:1729, comboWR:62.93, combo+-:5.38, AB_AveWR:57.55", "to": "Torgal, A Fine Hound", "value": 1729}, {"from": "Rinoa Heartilly", "label": "3.05", "title": "combo_ct:2543, comboWR:60.6, combo+-:3.05, AB_AveWR:57.55", "to": "Town Greeter", "value": 2543}, {"from": "Rinoa Heartilly", "label": "3.03", "title": "combo_ct:1177, comboWR:60.58, combo+-:3.03, AB_AveWR:57.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 1177}, {"from": "Rinoa Heartilly", "label": "3.65", "title": "combo_ct:1725, comboWR:59.65, combo+-:3.65, AB_AveWR:56.0", "to": "Garnet, Princess of Alexandria", "value": 1725}, {"from": "Battle Menu", "label": "4.09", "title": "combo_ct:2116, comboWR:61.29, combo+-:4.09, AB_AveWR:57.2", "to": "Ambrosia Whiteheart", "value": 2116}, {"from": "Battle Menu", "label": "3.16", "title": "combo_ct:4043, comboWR:59.86, combo+-:3.16, AB_AveWR:56.7", "to": "Weapons Vendor", "value": 4043}, {"from": "Battle Menu", "label": "3.51", "title": "combo_ct:550, comboWR:62.91, combo+-:3.51, AB_AveWR:59.4", "to": "Summon: Fenrir", "value": 550}, {"from": "Ambrosia Whiteheart", "label": "3.25", "title": "combo_ct:1542, comboWR:59.4, combo+-:3.25, AB_AveWR:56.15", "to": "Summon: Primal Garuda", "value": 1542}, {"from": "Ambrosia Whiteheart", "label": "3.32", "title": "combo_ct:1913, comboWR:60.17, combo+-:3.32, AB_AveWR:56.85", "to": "Zack Fair", "value": 1913}, {"from": "Summon: Primal Garuda", "label": "3.85", "title": "combo_ct:743, comboWR:59.35, combo+-:3.85, AB_AveWR:55.5", "to": "Goobbue Gardener", "value": 743}, {"from": "Summon: Primal Garuda", "label": "3.49", "title": "combo_ct:1040, comboWR:60.29, combo+-:3.49, AB_AveWR:56.8", "to": "Summon: Fat Chocobo", "value": 1040}, {"from": "Summon: Primal Garuda", "label": "4.22", "title": "combo_ct:529, comboWR:62.57, combo+-:4.22, AB_AveWR:58.35", "to": "Summon: Fenrir", "value": 529}, {"from": "Summon: Primal Garuda", "label": "3.01", "title": "combo_ct:866, comboWR:58.66, combo+-:3.01, AB_AveWR:55.65", "to": "Garnet, Princess of Alexandria", "value": 866}, {"from": "Ashe, Princess of Dalmasca", "label": "4.21", "title": "combo_ct:1216, comboWR:58.31, combo+-:4.21, AB_AveWR:54.1", "to": "G\u0027raha Tia", "value": 1216}, {"from": "G\u0027raha Tia", "label": "3.48", "title": "combo_ct:802, comboWR:58.98, combo+-:3.48, AB_AveWR:55.5", "to": "Chocobo Kick", "value": 802}, {"from": "Weapons Vendor", "label": "6.95", "title": "combo_ct:594, comboWR:63.8, combo+-:6.95, AB_AveWR:56.85", "to": "Torgal, A Fine Hound", "value": 594}, {"from": "Weapons Vendor", "label": "3.35", "title": "combo_ct:815, comboWR:58.65, combo+-:3.35, AB_AveWR:55.3", "to": "Garnet, Princess of Alexandria", "value": 815}, {"from": "Summon: Fenrir", "label": "5.7", "title": "combo_ct:551, comboWR:64.25, combo+-:5.7, AB_AveWR:58.55", "to": "The Crystal\u0027s Chosen", "value": 551}, {"from": "Summon: Fenrir", "label": "3.17", "title": "combo_ct:1846, comboWR:59.97, combo+-:3.17, AB_AveWR:56.8", "to": "Airship Crash", "value": 1846}, {"from": "Summon: Fenrir", "label": "4.36", "title": "combo_ct:6549, comboWR:62.56, combo+-:4.36, AB_AveWR:58.2", "to": "Balamb T-Rexaur", "value": 6549}, {"from": "Summon: Fenrir", "label": "4.99", "title": "combo_ct:6929, comboWR:63.99, combo+-:4.99, AB_AveWR:59.0", "to": "Chocobo Kick", "value": 6929}, {"from": "Summon: Fenrir", "label": "4.63", "title": "combo_ct:1223, comboWR:60.83, combo+-:4.63, AB_AveWR:56.2", "to": "Chocobo Racetrack", "value": 1223}, {"from": "Summon: Fenrir", "label": "4.01", "title": "combo_ct:1838, comboWR:61.21, combo+-:4.01, AB_AveWR:57.2", "to": "Clash of the Eikons", "value": 1838}, {"from": "Summon: Fenrir", "label": "7.0", "title": "combo_ct:2931, comboWR:66.5, combo+-:7.0, AB_AveWR:59.5", "to": "Coliseum Behemoth", "value": 2931}, {"from": "Summon: Fenrir", "label": "3.02", "title": "combo_ct:4509, comboWR:60.97, combo+-:3.02, AB_AveWR:57.95", "to": "Gran Pulse Ochu", "value": 4509}, {"from": "Summon: Fenrir", "label": "3.72", "title": "combo_ct:1359, comboWR:61.52, combo+-:3.72, AB_AveWR:57.8", "to": "Ride the Shoopuf", "value": 1359}, {"from": "Summon: Fenrir", "label": "3.35", "title": "combo_ct:2607, comboWR:63.6, combo+-:3.35, AB_AveWR:60.25", "to": "Sazh\u0027s Chocobo", "value": 2607}, {"from": "Summon: Fenrir", "label": "4.41", "title": "combo_ct:6753, comboWR:63.56, combo+-:4.41, AB_AveWR:59.15", "to": "Summon: Fat Chocobo", "value": 6753}, {"from": "Summon: Fenrir", "label": "3.94", "title": "combo_ct:7732, comboWR:63.49, combo+-:3.94, AB_AveWR:59.55", "to": "Town Greeter", "value": 7732}, {"from": "Summon: Fenrir", "label": "5.15", "title": "combo_ct:3337, comboWR:64.7, combo+-:5.15, AB_AveWR:59.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 3337}, {"from": "Summon: Fenrir", "label": "5.5", "title": "combo_ct:1189, comboWR:63.5, combo+-:5.5, AB_AveWR:58.0", "to": "Garnet, Princess of Alexandria", "value": 1189}, {"from": "The Crystal\u0027s Chosen", "label": "3.83", "title": "combo_ct:897, comboWR:59.53, combo+-:3.83, AB_AveWR:55.7", "to": "Goobbue Gardener", "value": 897}, {"from": "The Crystal\u0027s Chosen", "label": "3.13", "title": "combo_ct:724, comboWR:58.98, combo+-:3.13, AB_AveWR:55.85", "to": "Garnet, Princess of Alexandria", "value": 724}, {"from": "Goobbue Gardener", "label": "4.3", "title": "combo_ct:5344, comboWR:60.95, combo+-:4.3, AB_AveWR:56.65", "to": "Coliseum Behemoth", "value": 5344}, {"from": "Goobbue Gardener", "label": "3.71", "title": "combo_ct:5833, comboWR:60.41, combo+-:3.71, AB_AveWR:56.7", "to": "Vanille, Cheerful l\u0027Cie", "value": 5833}, {"from": "Magitek Infantry", "label": "3.18", "title": "combo_ct:5907, comboWR:59.98, combo+-:3.18, AB_AveWR:56.8", "to": "You\u0027re Not Alone", "value": 5907}, {"from": "Chocobo Kick", "label": "3.26", "title": "combo_ct:2701, comboWR:57.76, combo+-:3.26, AB_AveWR:54.5", "to": "Chocobo Racetrack", "value": 2701}, {"from": "Chocobo Kick", "label": "3.06", "title": "combo_ct:6176, comboWR:60.91, combo+-:3.06, AB_AveWR:57.85", "to": "Torgal, A Fine Hound", "value": 6176}, {"from": "Chocobo Kick", "label": "3.29", "title": "combo_ct:13884, comboWR:61.14, combo+-:3.29, AB_AveWR:57.85", "to": "Town Greeter", "value": 13884}, {"from": "Chocobo Kick", "label": "3.57", "title": "combo_ct:6320, comboWR:61.42, combo+-:3.57, AB_AveWR:57.85", "to": "Vanille, Cheerful l\u0027Cie", "value": 6320}, {"from": "Summon: Fat Chocobo", "label": "3.34", "title": "combo_ct:2273, comboWR:58.69, combo+-:3.34, AB_AveWR:55.35", "to": "Rydia\u0027s Return", "value": 2273}, {"from": "Summon: Fat Chocobo", "label": "3.53", "title": "combo_ct:5497, comboWR:62.23, combo+-:3.53, AB_AveWR:58.7", "to": "Sazh\u0027s Chocobo", "value": 5497}, {"from": "Torgal, A Fine Hound", "label": "3.49", "title": "combo_ct:2597, comboWR:61.84, combo+-:3.49, AB_AveWR:58.35", "to": "Coliseum Behemoth", "value": 2597}, {"from": "Torgal, A Fine Hound", "label": "4.18", "title": "combo_ct:1143, comboWR:59.93, combo+-:4.18, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 1143}, {"from": "Torgal, A Fine Hound", "label": "5.0", "title": "combo_ct:3134, comboWR:63.4, combo+-:5.0, AB_AveWR:58.4", "to": "Vanille, Cheerful l\u0027Cie", "value": 3134}, {"from": "Coliseum Behemoth", "label": "4.34", "title": "combo_ct:1550, comboWR:59.94, combo+-:4.34, AB_AveWR:55.6", "to": "Airship Crash", "value": 1550}, {"from": "Coliseum Behemoth", "label": "4.0", "title": "combo_ct:5234, comboWR:61.0, combo+-:4.0, AB_AveWR:57.0", "to": "Balamb T-Rexaur", "value": 5234}, {"from": "Coliseum Behemoth", "label": "3.59", "title": "combo_ct:1319, comboWR:59.59, combo+-:3.59, AB_AveWR:56.0", "to": "Commune with Beavers", "value": 1319}, {"from": "Coliseum Behemoth", "label": "4.21", "title": "combo_ct:1244, comboWR:60.61, combo+-:4.21, AB_AveWR:56.4", "to": "Diamond Weapon", "value": 1244}, {"from": "Coliseum Behemoth", "label": "4.51", "title": "combo_ct:3813, comboWR:60.66, combo+-:4.51, AB_AveWR:56.15", "to": "Prishe\u0027s Wanderings", "value": 3813}, {"from": "Coliseum Behemoth", "label": "4.73", "title": "combo_ct:1331, comboWR:60.33, combo+-:4.73, AB_AveWR:55.6", "to": "Reach the Horizon", "value": 1331}, {"from": "Coliseum Behemoth", "label": "3.75", "title": "combo_ct:2285, comboWR:62.8, combo+-:3.75, AB_AveWR:59.05", "to": "Sazh\u0027s Chocobo", "value": 2285}, {"from": "Coliseum Behemoth", "label": "4.24", "title": "combo_ct:6437, comboWR:62.59, combo+-:4.24, AB_AveWR:58.35", "to": "Town Greeter", "value": 6437}, {"from": "Coliseum Behemoth", "label": "3.54", "title": "combo_ct:2805, comboWR:61.89, combo+-:3.54, AB_AveWR:58.35", "to": "Vanille, Cheerful l\u0027Cie", "value": 2805}, {"from": "Commune with Beavers", "label": "3.96", "title": "combo_ct:591, comboWR:57.36, combo+-:3.96, AB_AveWR:53.4", "to": "Rydia\u0027s Return", "value": 591}, {"from": "Commune with Beavers", "label": "3.24", "title": "combo_ct:1501, comboWR:59.29, combo+-:3.24, AB_AveWR:56.05", "to": "Vanille, Cheerful l\u0027Cie", "value": 1501}, {"from": "Blitzball Shot", "label": "3.13", "title": "combo_ct:1296, comboWR:59.03, combo+-:3.13, AB_AveWR:55.9", "to": "Vanille, Cheerful l\u0027Cie", "value": 1296}, {"from": "Airship Crash", "label": "3.33", "title": "combo_ct:1431, comboWR:59.68, combo+-:3.33, AB_AveWR:56.35", "to": "Sazh\u0027s Chocobo", "value": 1431}, {"from": "Sazh\u0027s Chocobo", "label": "4.24", "title": "combo_ct:1157, comboWR:60.59, combo+-:4.24, AB_AveWR:56.35", "to": "Reach the Horizon", "value": 1157}, {"from": "Sazh\u0027s Chocobo", "label": "3.4", "title": "combo_ct:5518, comboWR:62.5, combo+-:3.4, AB_AveWR:59.1", "to": "Town Greeter", "value": 5518}, {"from": "Sazh\u0027s Chocobo", "label": "3.74", "title": "combo_ct:2411, comboWR:62.84, combo+-:3.74, AB_AveWR:59.1", "to": "Vanille, Cheerful l\u0027Cie", "value": 2411}, {"from": "Balamb T-Rexaur", "label": "3.04", "title": "combo_ct:3481, comboWR:58.14, combo+-:3.04, AB_AveWR:55.1", "to": "Diamond Weapon", "value": 3481}, {"from": "Balamb T-Rexaur", "label": "3.4", "title": "combo_ct:6318, comboWR:60.45, combo+-:3.4, AB_AveWR:57.05", "to": "Vanille, Cheerful l\u0027Cie", "value": 6318}, {"from": "Diamond Weapon", "label": "5.24", "title": "combo_ct:4805, comboWR:61.69, combo+-:5.24, AB_AveWR:56.45", "to": "Town Greeter", "value": 4805}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.49", "title": "combo_ct:1589, comboWR:60.54, combo+-:4.49, AB_AveWR:56.05", "to": "Clash of the Eikons", "value": 1589}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.51", "title": "combo_ct:4696, comboWR:61.31, combo+-:4.51, AB_AveWR:56.8", "to": "Gran Pulse Ochu", "value": 4696}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.23", "title": "combo_ct:1097, comboWR:59.98, combo+-:4.23, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 1097}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.7", "title": "combo_ct:7965, comboWR:63.1, combo+-:4.7, AB_AveWR:58.4", "to": "Town Greeter", "value": 7965}, {"from": "Chocobo Racetrack", "label": "3.19", "title": "combo_ct:910, comboWR:55.49, combo+-:3.19, AB_AveWR:52.3", "to": "Reach the Horizon", "value": 910}, {"from": "Town Greeter", "label": "3.09", "title": "combo_ct:9155, comboWR:59.29, combo+-:3.09, AB_AveWR:56.2", "to": "Prishe\u0027s Wanderings", "value": 9155}, {"from": "Town Greeter", "label": "4.31", "title": "combo_ct:2569, comboWR:60.96, combo+-:4.31, AB_AveWR:56.65", "to": "Ride the Shoopuf", "value": 2569}, {"from": "Town Greeter", "label": "4.15", "title": "combo_ct:2661, comboWR:59.9, combo+-:4.15, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 2661}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

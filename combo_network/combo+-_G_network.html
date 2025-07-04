@@ -1,0 +1,394 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Coliseum Behemoth">Coliseum Behemoth</option>
+                                
+                                    <option value="Airship Crash">Airship Crash</option>
+                                
+                                    <option value="Sazh's Chocobo">Sazh's Chocobo</option>
+                                
+                                    <option value="Summon: Fenrir">Summon: Fenrir</option>
+                                
+                                    <option value="Balamb T-Rexaur">Balamb T-Rexaur</option>
+                                
+                                    <option value="Diamond Weapon">Diamond Weapon</option>
+                                
+                                    <option value="Vanille, Cheerful l'Cie">Vanille, Cheerful l'Cie</option>
+                                
+                                    <option value="Chocobo Racetrack">Chocobo Racetrack</option>
+                                
+                                    <option value="Chocobo Kick">Chocobo Kick</option>
+                                
+                                    <option value="Torgal, A Fine Hound">Torgal, A Fine Hound</option>
+                                
+                                    <option value="Town Greeter">Town Greeter</option>
+                                
+                                    <option value="Reach the Horizon">Reach the Horizon</option>
+                                
+                                    <option value="Clash of the Eikons">Clash of the Eikons</option>
+                                
+                                    <option value="Commune with Beavers">Commune with Beavers</option>
+                                
+                                    <option value="Goobbue Gardener">Goobbue Gardener</option>
+                                
+                                    <option value="Prishe's Wanderings">Prishe's Wanderings</option>
+                                
+                                    <option value="Rydia's Return">Rydia's Return</option>
+                                
+                                    <option value="Gran Pulse Ochu">Gran Pulse Ochu</option>
+                                
+                                    <option value="Ride the Shoopuf">Ride the Shoopuf</option>
+                                
+                                    <option value="Summon: Fat Chocobo">Summon: Fat Chocobo</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Coliseum Behemoth", "image": "img/Coliseum_Behemoth.png", "label": "Coliseum Behemoth", "shape": "image", "title": "GIHWR:58.3, avg_pick:4.81", "url": "G_combo_network_Coliseum_Behemoth"}, {"color": "#97c2fc", "id": "Airship Crash", "image": "img/Airship_Crash.png", "label": "Airship Crash", "shape": "image", "title": "GIHWR:52.9, avg_pick:10.86", "url": "G_combo_network_Airship_Crash"}, {"color": "#97c2fc", "id": "Sazh\u0027s Chocobo", "image": "img/Sazh\u0027s_Chocobo.png", "label": "Sazh\u0027s Chocobo", "shape": "image", "title": "GIHWR:59.8, avg_pick:3.09", "url": "G_combo_network_Sazh\u0027s_Chocobo"}, {"color": "#97c2fc", "id": "Summon: Fenrir", "image": "img/Summon_Fenrir.png", "label": "Summon: Fenrir", "shape": "image", "title": "GIHWR:60.7, avg_pick:2.67", "url": "G_combo_network_Summon:_Fenrir"}, {"color": "#97c2fc", "id": "Balamb T-Rexaur", "image": "img/Balamb_T-Rexaur.png", "label": "Balamb T-Rexaur", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.41", "url": "G_combo_network_Balamb_T-Rexaur"}, {"color": "#97c2fc", "id": "Diamond Weapon", "image": "img/Diamond_Weapon.png", "label": "Diamond Weapon", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.29", "url": "G_combo_network_Diamond_Weapon"}, {"color": "#97c2fc", "id": "Vanille, Cheerful l\u0027Cie", "image": "img/Vanille,_Cheerful_l\u0027Cie.png", "label": "Vanille, Cheerful l\u0027Cie", "shape": "image", "title": "GIHWR:58.4, avg_pick:4.01", "url": "G_combo_network_Vanille,_Cheerful_l\u0027Cie"}, {"color": "#97c2fc", "id": "Chocobo Racetrack", "image": "img/Chocobo_Racetrack.png", "label": "Chocobo Racetrack", "shape": "image", "title": "GIHWR:51.7, avg_pick:6.02", "url": "G_combo_network_Chocobo_Racetrack"}, {"color": "#97c2fc", "id": "Chocobo Kick", "image": "img/Chocobo_Kick.png", "label": "Chocobo Kick", "shape": "image", "title": "GIHWR:57.3, avg_pick:5.35", "url": "G_combo_network_Chocobo_Kick"}, {"color": "#97c2fc", "id": "Torgal, A Fine Hound", "image": "img/Torgal,_A_Fine_Hound.png", "label": "Torgal, A Fine Hound", "shape": "image", "title": "GIHWR:58.4, avg_pick:3.19", "url": "G_combo_network_Torgal,_A_Fine_Hound"}, {"color": "#97c2fc", "id": "Town Greeter", "image": "img/Town_Greeter.png", "label": "Town Greeter", "shape": "image", "title": "GIHWR:58.4, avg_pick:6.5", "url": "G_combo_network_Town_Greeter"}, {"color": "#97c2fc", "id": "Reach the Horizon", "image": "img/Reach_the_Horizon.png", "label": "Reach the Horizon", "shape": "image", "title": "GIHWR:52.9, avg_pick:6.97", "url": "G_combo_network_Reach_the_Horizon"}, {"color": "#97c2fc", "id": "Clash of the Eikons", "image": "img/Clash_of_the_Eikons.png", "label": "Clash of the Eikons", "shape": "image", "title": "GIHWR:53.7, avg_pick:6.96", "url": "G_combo_network_Clash_of_the_Eikons"}, {"color": "#97c2fc", "id": "Commune with Beavers", "image": "img/Commune_with_Beavers.png", "label": "Commune with Beavers", "shape": "image", "title": "GIHWR:53.7, avg_pick:11.01", "url": "G_combo_network_Commune_with_Beavers"}, {"color": "#97c2fc", "id": "Goobbue Gardener", "image": "img/Goobbue_Gardener.png", "label": "Goobbue Gardener", "shape": "image", "title": "GIHWR:55.0, avg_pick:6.53", "url": "G_combo_network_Goobbue_Gardener"}, {"color": "#97c2fc", "id": "Prishe\u0027s Wanderings", "image": "img/Prishe\u0027s_Wanderings.png", "label": "Prishe\u0027s Wanderings", "shape": "image", "title": "GIHWR:54.0, avg_pick:7.79", "url": "G_combo_network_Prishe\u0027s_Wanderings"}, {"color": "#97c2fc", "id": "Rydia\u0027s Return", "image": "img/Rydia\u0027s_Return.png", "label": "Rydia\u0027s Return", "shape": "image", "title": "GIHWR:53.1, avg_pick:8.78", "url": "G_combo_network_Rydia\u0027s_Return"}, {"color": "#97c2fc", "id": "Gran Pulse Ochu", "image": "img/Gran_Pulse_Ochu.png", "label": "Gran Pulse Ochu", "shape": "image", "title": "GIHWR:55.2, avg_pick:8.66", "url": "G_combo_network_Gran_Pulse_Ochu"}, {"color": "#97c2fc", "id": "Ride the Shoopuf", "image": "img/Ride_the_Shoopuf.png", "label": "Ride the Shoopuf", "shape": "image", "title": "GIHWR:54.9, avg_pick:5.31", "url": "G_combo_network_Ride_the_Shoopuf"}, {"color": "#97c2fc", "id": "Summon: Fat Chocobo", "image": "img/Summon_Fat_Chocobo.png", "label": "Summon: Fat Chocobo", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.47", "url": "G_combo_network_Summon:_Fat_Chocobo"}]);
+                  edges = new vis.DataSet([{"from": "Coliseum Behemoth", "label": "4.34", "title": "combo_ct:1550, comboWR:59.94, combo+-:4.34, AB_AveWR:55.6", "to": "Airship Crash", "value": 4.34}, {"from": "Coliseum Behemoth", "label": "4.0", "title": "combo_ct:5234, comboWR:61.0, combo+-:4.0, AB_AveWR:57.0", "to": "Balamb T-Rexaur", "value": 4.0}, {"from": "Coliseum Behemoth", "label": "3.59", "title": "combo_ct:1319, comboWR:59.59, combo+-:3.59, AB_AveWR:56.0", "to": "Commune with Beavers", "value": 3.59}, {"from": "Coliseum Behemoth", "label": "4.21", "title": "combo_ct:1244, comboWR:60.61, combo+-:4.21, AB_AveWR:56.4", "to": "Diamond Weapon", "value": 4.21}, {"from": "Coliseum Behemoth", "label": "4.3", "title": "combo_ct:5344, comboWR:60.95, combo+-:4.3, AB_AveWR:56.65", "to": "Goobbue Gardener", "value": 4.3}, {"from": "Coliseum Behemoth", "label": "4.51", "title": "combo_ct:3813, comboWR:60.66, combo+-:4.51, AB_AveWR:56.15", "to": "Prishe\u0027s Wanderings", "value": 4.51}, {"from": "Coliseum Behemoth", "label": "4.73", "title": "combo_ct:1331, comboWR:60.33, combo+-:4.73, AB_AveWR:55.6", "to": "Reach the Horizon", "value": 4.73}, {"from": "Coliseum Behemoth", "label": "3.75", "title": "combo_ct:2285, comboWR:62.8, combo+-:3.75, AB_AveWR:59.05", "to": "Sazh\u0027s Chocobo", "value": 3.75}, {"from": "Coliseum Behemoth", "label": "7.0", "title": "combo_ct:2931, comboWR:66.5, combo+-:7.0, AB_AveWR:59.5", "to": "Summon: Fenrir", "value": 7.0}, {"from": "Coliseum Behemoth", "label": "3.49", "title": "combo_ct:2597, comboWR:61.84, combo+-:3.49, AB_AveWR:58.35", "to": "Torgal, A Fine Hound", "value": 3.49}, {"from": "Coliseum Behemoth", "label": "4.24", "title": "combo_ct:6437, comboWR:62.59, combo+-:4.24, AB_AveWR:58.35", "to": "Town Greeter", "value": 4.24}, {"from": "Coliseum Behemoth", "label": "3.54", "title": "combo_ct:2805, comboWR:61.89, combo+-:3.54, AB_AveWR:58.35", "to": "Vanille, Cheerful l\u0027Cie", "value": 3.54}, {"from": "Airship Crash", "label": "3.33", "title": "combo_ct:1431, comboWR:59.68, combo+-:3.33, AB_AveWR:56.35", "to": "Sazh\u0027s Chocobo", "value": 3.33}, {"from": "Airship Crash", "label": "3.17", "title": "combo_ct:1846, comboWR:59.97, combo+-:3.17, AB_AveWR:56.8", "to": "Summon: Fenrir", "value": 3.17}, {"from": "Sazh\u0027s Chocobo", "label": "4.24", "title": "combo_ct:1157, comboWR:60.59, combo+-:4.24, AB_AveWR:56.35", "to": "Reach the Horizon", "value": 4.24}, {"from": "Sazh\u0027s Chocobo", "label": "3.53", "title": "combo_ct:5497, comboWR:62.23, combo+-:3.53, AB_AveWR:58.7", "to": "Summon: Fat Chocobo", "value": 3.53}, {"from": "Sazh\u0027s Chocobo", "label": "3.35", "title": "combo_ct:2607, comboWR:63.6, combo+-:3.35, AB_AveWR:60.25", "to": "Summon: Fenrir", "value": 3.35}, {"from": "Sazh\u0027s Chocobo", "label": "3.4", "title": "combo_ct:5518, comboWR:62.5, combo+-:3.4, AB_AveWR:59.1", "to": "Town Greeter", "value": 3.4}, {"from": "Sazh\u0027s Chocobo", "label": "3.74", "title": "combo_ct:2411, comboWR:62.84, combo+-:3.74, AB_AveWR:59.1", "to": "Vanille, Cheerful l\u0027Cie", "value": 3.74}, {"from": "Summon: Fenrir", "label": "4.36", "title": "combo_ct:6549, comboWR:62.56, combo+-:4.36, AB_AveWR:58.2", "to": "Balamb T-Rexaur", "value": 4.36}, {"from": "Summon: Fenrir", "label": "4.99", "title": "combo_ct:6929, comboWR:63.99, combo+-:4.99, AB_AveWR:59.0", "to": "Chocobo Kick", "value": 4.99}, {"from": "Summon: Fenrir", "label": "4.63", "title": "combo_ct:1223, comboWR:60.83, combo+-:4.63, AB_AveWR:56.2", "to": "Chocobo Racetrack", "value": 4.63}, {"from": "Summon: Fenrir", "label": "4.01", "title": "combo_ct:1838, comboWR:61.21, combo+-:4.01, AB_AveWR:57.2", "to": "Clash of the Eikons", "value": 4.01}, {"from": "Summon: Fenrir", "label": "3.02", "title": "combo_ct:4509, comboWR:60.97, combo+-:3.02, AB_AveWR:57.95", "to": "Gran Pulse Ochu", "value": 3.02}, {"from": "Summon: Fenrir", "label": "3.72", "title": "combo_ct:1359, comboWR:61.52, combo+-:3.72, AB_AveWR:57.8", "to": "Ride the Shoopuf", "value": 3.72}, {"from": "Summon: Fenrir", "label": "4.41", "title": "combo_ct:6753, comboWR:63.56, combo+-:4.41, AB_AveWR:59.15", "to": "Summon: Fat Chocobo", "value": 4.41}, {"from": "Summon: Fenrir", "label": "3.94", "title": "combo_ct:7732, comboWR:63.49, combo+-:3.94, AB_AveWR:59.55", "to": "Town Greeter", "value": 3.94}, {"from": "Summon: Fenrir", "label": "5.15", "title": "combo_ct:3337, comboWR:64.7, combo+-:5.15, AB_AveWR:59.55", "to": "Vanille, Cheerful l\u0027Cie", "value": 5.15}, {"from": "Balamb T-Rexaur", "label": "3.04", "title": "combo_ct:3481, comboWR:58.14, combo+-:3.04, AB_AveWR:55.1", "to": "Diamond Weapon", "value": 3.04}, {"from": "Balamb T-Rexaur", "label": "3.4", "title": "combo_ct:6318, comboWR:60.45, combo+-:3.4, AB_AveWR:57.05", "to": "Vanille, Cheerful l\u0027Cie", "value": 3.4}, {"from": "Diamond Weapon", "label": "5.24", "title": "combo_ct:4805, comboWR:61.69, combo+-:5.24, AB_AveWR:56.45", "to": "Town Greeter", "value": 5.24}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.57", "title": "combo_ct:6320, comboWR:61.42, combo+-:3.57, AB_AveWR:57.85", "to": "Chocobo Kick", "value": 3.57}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.49", "title": "combo_ct:1589, comboWR:60.54, combo+-:4.49, AB_AveWR:56.05", "to": "Clash of the Eikons", "value": 4.49}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.24", "title": "combo_ct:1501, comboWR:59.29, combo+-:3.24, AB_AveWR:56.05", "to": "Commune with Beavers", "value": 3.24}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "3.71", "title": "combo_ct:5833, comboWR:60.41, combo+-:3.71, AB_AveWR:56.7", "to": "Goobbue Gardener", "value": 3.71}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.51", "title": "combo_ct:4696, comboWR:61.31, combo+-:4.51, AB_AveWR:56.8", "to": "Gran Pulse Ochu", "value": 4.51}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.23", "title": "combo_ct:1097, comboWR:59.98, combo+-:4.23, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 4.23}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "5.0", "title": "combo_ct:3134, comboWR:63.4, combo+-:5.0, AB_AveWR:58.4", "to": "Torgal, A Fine Hound", "value": 5.0}, {"from": "Vanille, Cheerful l\u0027Cie", "label": "4.7", "title": "combo_ct:7965, comboWR:63.1, combo+-:4.7, AB_AveWR:58.4", "to": "Town Greeter", "value": 4.7}, {"from": "Chocobo Racetrack", "label": "3.26", "title": "combo_ct:2701, comboWR:57.76, combo+-:3.26, AB_AveWR:54.5", "to": "Chocobo Kick", "value": 3.26}, {"from": "Chocobo Racetrack", "label": "3.19", "title": "combo_ct:910, comboWR:55.49, combo+-:3.19, AB_AveWR:52.3", "to": "Reach the Horizon", "value": 3.19}, {"from": "Chocobo Kick", "label": "3.06", "title": "combo_ct:6176, comboWR:60.91, combo+-:3.06, AB_AveWR:57.85", "to": "Torgal, A Fine Hound", "value": 3.06}, {"from": "Chocobo Kick", "label": "3.29", "title": "combo_ct:13884, comboWR:61.14, combo+-:3.29, AB_AveWR:57.85", "to": "Town Greeter", "value": 3.29}, {"from": "Torgal, A Fine Hound", "label": "4.18", "title": "combo_ct:1143, comboWR:59.93, combo+-:4.18, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 4.18}, {"from": "Town Greeter", "label": "3.09", "title": "combo_ct:9155, comboWR:59.29, combo+-:3.09, AB_AveWR:56.2", "to": "Prishe\u0027s Wanderings", "value": 3.09}, {"from": "Town Greeter", "label": "4.31", "title": "combo_ct:2569, comboWR:60.96, combo+-:4.31, AB_AveWR:56.65", "to": "Ride the Shoopuf", "value": 4.31}, {"from": "Town Greeter", "label": "4.15", "title": "combo_ct:2661, comboWR:59.9, combo+-:4.15, AB_AveWR:55.75", "to": "Rydia\u0027s Return", "value": 4.15}, {"from": "Commune with Beavers", "label": "3.96", "title": "combo_ct:591, comboWR:57.36, combo+-:3.96, AB_AveWR:53.4", "to": "Rydia\u0027s Return", "value": 3.96}, {"from": "Rydia\u0027s Return", "label": "3.34", "title": "combo_ct:2273, comboWR:58.69, combo+-:3.34, AB_AveWR:55.35", "to": "Summon: Fat Chocobo", "value": 3.34}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

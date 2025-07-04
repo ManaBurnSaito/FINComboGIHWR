@@ -1,0 +1,432 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Crystal Fragments">Crystal Fragments</option>
+                                
+                                    <option value="Adelbert Steiner">Adelbert Steiner</option>
+                                
+                                    <option value="Delivery Moogle">Delivery Moogle</option>
+                                
+                                    <option value="Dragoon's Lance">Dragoon's Lance</option>
+                                
+                                    <option value="Paladin's Arms">Paladin's Arms</option>
+                                
+                                    <option value="Restoration Magic">Restoration Magic</option>
+                                
+                                    <option value="Slash of Light">Slash of Light</option>
+                                
+                                    <option value="White Auracite">White Auracite</option>
+                                
+                                    <option value="White Mage's Staff">White Mage's Staff</option>
+                                
+                                    <option value="Choco-Comet">Choco-Comet</option>
+                                
+                                    <option value="Coral Sword">Coral Sword</option>
+                                
+                                    <option value="Samurai's Katana">Samurai's Katana</option>
+                                
+                                    <option value="Zidane, Tantalus Thief">Zidane, Tantalus Thief</option>
+                                
+                                    <option value="Battle Menu">Battle Menu</option>
+                                
+                                    <option value="Ambrosia Whiteheart">Ambrosia Whiteheart</option>
+                                
+                                    <option value="Zack Fair">Zack Fair</option>
+                                
+                                    <option value="Ashe, Princess of Dalmasca">Ashe, Princess of Dalmasca</option>
+                                
+                                    <option value="Weapons Vendor">Weapons Vendor</option>
+                                
+                                    <option value="Item Shopkeep">Item Shopkeep</option>
+                                
+                                    <option value="Warrior's Sword">Warrior's Sword</option>
+                                
+                                    <option value="Giott, King of the Dwarves">Giott, King of the Dwarves</option>
+                                
+                                    <option value="Gaelicat">Gaelicat</option>
+                                
+                                    <option value="Magitek Infantry">Magitek Infantry</option>
+                                
+                                    <option value="You're Not Alone">You're Not Alone</option>
+                                
+                                    <option value="Thunder Magic">Thunder Magic</option>
+                                
+                                    <option value="Magitek Armor">Magitek Armor</option>
+                                
+                                    <option value="Freya Crescent">Freya Crescent</option>
+                                
+                                    <option value="Suplex">Suplex</option>
+                                
+                                    <option value="Opera Love Song">Opera Love Song</option>
+                                
+                                    <option value="Call the Mountain Chocobo">Call the Mountain Chocobo</option>
+                                
+                                    <option value="Barret Wallace">Barret Wallace</option>
+                                
+                                    <option value="Blazing Bomb">Blazing Bomb</option>
+                                
+                                    <option value="Sorceress's Schemes">Sorceress's Schemes</option>
+                                
+                                    <option value="Fire Magic">Fire Magic</option>
+                                
+                                    <option value="Light of Judgment">Light of Judgment</option>
+                                
+                                    <option value="Mysidian Elder">Mysidian Elder</option>
+                                
+                                    <option value="Prompto Argentum">Prompto Argentum</option>
+                                
+                                    <option value="Laughing Mad">Laughing Mad</option>
+                                
+                                    <option value="Queen Brahne">Queen Brahne</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Crystal Fragments", "image": "img/Crystal_Fragments.png", "label": "Crystal Fragments", "shape": "image", "title": "GIHWR:52.0, avg_pick:7.37", "url": "WR_combo_network_Crystal_Fragments"}, {"color": "#97c2fc", "id": "Adelbert Steiner", "image": "img/Adelbert_Steiner.png", "label": "Adelbert Steiner", "shape": "image", "title": "GIHWR:58.0, avg_pick:3.87", "url": "WR_combo_network_Adelbert_Steiner"}, {"color": "#97c2fc", "id": "Delivery Moogle", "image": "img/Delivery_Moogle.png", "label": "Delivery Moogle", "shape": "image", "title": "GIHWR:59.6, avg_pick:4.34", "url": "WR_combo_network_Delivery_Moogle"}, {"color": "#97c2fc", "id": "Dragoon\u0027s Lance", "image": "img/Dragoon\u0027s_Lance.png", "label": "Dragoon\u0027s Lance", "shape": "image", "title": "GIHWR:61.4, avg_pick:2.97", "url": "WR_combo_network_Dragoon\u0027s_Lance"}, {"color": "#97c2fc", "id": "Paladin\u0027s Arms", "image": "img/Paladin\u0027s_Arms.png", "label": "Paladin\u0027s Arms", "shape": "image", "title": "GIHWR:55.7, avg_pick:6.99", "url": "WR_combo_network_Paladin\u0027s_Arms"}, {"color": "#97c2fc", "id": "Restoration Magic", "image": "img/Restoration_Magic.png", "label": "Restoration Magic", "shape": "image", "title": "GIHWR:56.7, avg_pick:6.9", "url": "WR_combo_network_Restoration_Magic"}, {"color": "#97c2fc", "id": "Slash of Light", "image": "img/Slash_of_Light.png", "label": "Slash of Light", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.12", "url": "WR_combo_network_Slash_of_Light"}, {"color": "#97c2fc", "id": "White Auracite", "image": "img/White_Auracite.png", "label": "White Auracite", "shape": "image", "title": "GIHWR:59.1, avg_pick:3.91", "url": "WR_combo_network_White_Auracite"}, {"color": "#97c2fc", "id": "White Mage\u0027s Staff", "image": "img/White_Mage\u0027s_Staff.png", "label": "White Mage\u0027s Staff", "shape": "image", "title": "GIHWR:57.6, avg_pick:5.6", "url": "WR_combo_network_White_Mage\u0027s_Staff"}, {"color": "#97c2fc", "id": "Choco-Comet", "image": "img/Choco-Comet.png", "label": "Choco-Comet", "shape": "image", "title": "GIHWR:61.1, avg_pick:3.2", "url": "WR_combo_network_Choco-Comet"}, {"color": "#97c2fc", "id": "Coral Sword", "image": "img/Coral_Sword.png", "label": "Coral Sword", "shape": "image", "title": "GIHWR:54.5, avg_pick:8.76", "url": "WR_combo_network_Coral_Sword"}, {"color": "#97c2fc", "id": "Samurai\u0027s Katana", "image": "img/Samurai\u0027s_Katana.png", "label": "Samurai\u0027s Katana", "shape": "image", "title": "GIHWR:60.2, avg_pick:3.67", "url": "WR_combo_network_Samurai\u0027s_Katana"}, {"color": "#97c2fc", "id": "Zidane, Tantalus Thief", "image": "img/Zidane,_Tantalus_Thief.png", "label": "Zidane, Tantalus Thief", "shape": "image", "title": "GIHWR:58.0, avg_pick:7.2", "url": "WR_combo_network_Zidane,_Tantalus_Thief"}, {"color": "#97c2fc", "id": "Battle Menu", "image": "img/Battle_Menu.png", "label": "Battle Menu", "shape": "image", "title": "GIHWR:58.1, avg_pick:3.96", "url": "WR_combo_network_Battle_Menu"}, {"color": "#97c2fc", "id": "Ambrosia Whiteheart", "image": "img/Ambrosia_Whiteheart.png", "label": "Ambrosia Whiteheart", "shape": "image", "title": "GIHWR:56.3, avg_pick:4.36", "url": "WR_combo_network_Ambrosia_Whiteheart"}, {"color": "#97c2fc", "id": "Zack Fair", "image": "img/Zack_Fair.png", "label": "Zack Fair", "shape": "image", "title": "GIHWR:57.4, avg_pick:4.57", "url": "WR_combo_network_Zack_Fair"}, {"color": "#97c2fc", "id": "Ashe, Princess of Dalmasca", "image": "img/Ashe,_Princess_of_Dalmasca.png", "label": "Ashe, Princess of Dalmasca", "shape": "image", "title": "GIHWR:54.5, avg_pick:5.76", "url": "WR_combo_network_Ashe,_Princess_of_Dalmasca"}, {"color": "#97c2fc", "id": "Weapons Vendor", "image": "img/Weapons_Vendor.png", "label": "Weapons Vendor", "shape": "image", "title": "GIHWR:55.3, avg_pick:7.67", "url": "WR_combo_network_Weapons_Vendor"}, {"color": "#97c2fc", "id": "Item Shopkeep", "image": "img/Item_Shopkeep.png", "label": "Item Shopkeep", "shape": "image", "title": "GIHWR:52.6, avg_pick:11.03", "url": "WR_combo_network_Item_Shopkeep"}, {"color": "#97c2fc", "id": "Warrior\u0027s Sword", "image": "img/Warrior\u0027s_Sword.png", "label": "Warrior\u0027s Sword", "shape": "image", "title": "GIHWR:54.7, avg_pick:8.26", "url": "WR_combo_network_Warrior\u0027s_Sword"}, {"color": "#97c2fc", "id": "Giott, King of the Dwarves", "image": "img/Giott,_King_of_the_Dwarves.png", "label": "Giott, King of the Dwarves", "shape": "image", "title": "GIHWR:56.1, avg_pick:7.89", "url": "WR_combo_network_Giott,_King_of_the_Dwarves"}, {"color": "#97c2fc", "id": "Gaelicat", "image": "img/Gaelicat.png", "label": "Gaelicat", "shape": "image", "title": "GIHWR:56.2, avg_pick:7.15", "url": "WR_combo_network_Gaelicat"}, {"color": "#97c2fc", "id": "Magitek Infantry", "image": "img/Magitek_Infantry.png", "label": "Magitek Infantry", "shape": "image", "title": "GIHWR:57.7, avg_pick:6.3", "url": "WR_combo_network_Magitek_Infantry"}, {"color": "#97c2fc", "id": "You\u0027re Not Alone", "image": "img/You\u0027re_Not_Alone.png", "label": "You\u0027re Not Alone", "shape": "image", "title": "GIHWR:55.9, avg_pick:9.81", "url": "WR_combo_network_You\u0027re_Not_Alone"}, {"color": "#97c2fc", "id": "Thunder Magic", "image": "img/Thunder_Magic.png", "label": "Thunder Magic", "shape": "image", "title": "GIHWR:58.4, avg_pick:3.8", "url": "WR_combo_network_Thunder_Magic"}, {"color": "#97c2fc", "id": "Magitek Armor", "image": "img/Magitek_Armor.png", "label": "Magitek Armor", "shape": "image", "title": "GIHWR:57.1, avg_pick:5.71", "url": "WR_combo_network_Magitek_Armor"}, {"color": "#97c2fc", "id": "Freya Crescent", "image": "img/Freya_Crescent.png", "label": "Freya Crescent", "shape": "image", "title": "GIHWR:54.6, avg_pick:7.97", "url": "WR_combo_network_Freya_Crescent"}, {"color": "#97c2fc", "id": "Suplex", "image": "img/Suplex.png", "label": "Suplex", "shape": "image", "title": "GIHWR:56.5, avg_pick:4.56", "url": "WR_combo_network_Suplex"}, {"color": "#97c2fc", "id": "Opera Love Song", "image": "img/Opera_Love_Song.png", "label": "Opera Love Song", "shape": "image", "title": "GIHWR:53.0, avg_pick:9.52", "url": "WR_combo_network_Opera_Love_Song"}, {"color": "#97c2fc", "id": "Call the Mountain Chocobo", "image": "img/Call_the_Mountain_Chocobo.png", "label": "Call the Mountain Chocobo", "shape": "image", "title": "GIHWR:57.2, avg_pick:6.97", "url": "WR_combo_network_Call_the_Mountain_Chocobo"}, {"color": "#97c2fc", "id": "Barret Wallace", "image": "img/Barret_Wallace.png", "label": "Barret Wallace", "shape": "image", "title": "GIHWR:51.4, avg_pick:8.93", "url": "WR_combo_network_Barret_Wallace"}, {"color": "#97c2fc", "id": "Blazing Bomb", "image": "img/Blazing_Bomb.png", "label": "Blazing Bomb", "shape": "image", "title": "GIHWR:56.7, avg_pick:9.19", "url": "WR_combo_network_Blazing_Bomb"}, {"color": "#97c2fc", "id": "Sorceress\u0027s Schemes", "image": "img/Sorceress\u0027s_Schemes.png", "label": "Sorceress\u0027s Schemes", "shape": "image", "title": "GIHWR:57.6, avg_pick:8.47", "url": "WR_combo_network_Sorceress\u0027s_Schemes"}, {"color": "#97c2fc", "id": "Fire Magic", "image": "img/Fire_Magic.png", "label": "Fire Magic", "shape": "image", "title": "GIHWR:57.2, avg_pick:5.43", "url": "WR_combo_network_Fire_Magic"}, {"color": "#97c2fc", "id": "Light of Judgment", "image": "img/Light_of_Judgment.png", "label": "Light of Judgment", "shape": "image", "title": "GIHWR:53.1, avg_pick:8.55", "url": "WR_combo_network_Light_of_Judgment"}, {"color": "#97c2fc", "id": "Mysidian Elder", "image": "img/Mysidian_Elder.png", "label": "Mysidian Elder", "shape": "image", "title": "GIHWR:52.1, avg_pick:8.98", "url": "WR_combo_network_Mysidian_Elder"}, {"color": "#97c2fc", "id": "Prompto Argentum", "image": "img/Prompto_Argentum.png", "label": "Prompto Argentum", "shape": "image", "title": "GIHWR:56.1, avg_pick:6.29", "url": "WR_combo_network_Prompto_Argentum"}, {"color": "#97c2fc", "id": "Laughing Mad", "image": "img/Laughing_Mad.png", "label": "Laughing Mad", "shape": "image", "title": "GIHWR:53.3, avg_pick:10.85", "url": "WR_combo_network_Laughing_Mad"}, {"color": "#97c2fc", "id": "Queen Brahne", "image": "img/Queen_Brahne.png", "label": "Queen Brahne", "shape": "image", "title": "GIHWR:52.4, avg_pick:5.78", "url": "WR_combo_network_Queen_Brahne"}]);
+                  edges = new vis.DataSet([{"from": "Crystal Fragments", "label": "5.28", "title": "combo_ct:1367, comboWR:60.28, combo+-:5.28, AB_AveWR:55.0", "to": "Adelbert Steiner", "value": 5.28}, {"from": "Crystal Fragments", "label": "3.17", "title": "combo_ct:612, comboWR:58.17, combo+-:3.17, AB_AveWR:55.0", "to": "Zidane, Tantalus Thief", "value": 3.17}, {"from": "Adelbert Steiner", "label": "6.0", "title": "combo_ct:2767, comboWR:64.8, combo+-:6.0, AB_AveWR:58.8", "to": "Delivery Moogle", "value": 6.0}, {"from": "Adelbert Steiner", "label": "8.29", "title": "combo_ct:2793, comboWR:67.99, combo+-:8.29, AB_AveWR:59.7", "to": "Dragoon\u0027s Lance", "value": 8.29}, {"from": "Adelbert Steiner", "label": "3.38", "title": "combo_ct:5491, comboWR:60.23, combo+-:3.38, AB_AveWR:56.85", "to": "Paladin\u0027s Arms", "value": 3.38}, {"from": "Adelbert Steiner", "label": "3.88", "title": "combo_ct:1336, comboWR:61.23, combo+-:3.88, AB_AveWR:57.35", "to": "Restoration Magic", "value": 3.88}, {"from": "Adelbert Steiner", "label": "3.31", "title": "combo_ct:4974, comboWR:60.41, combo+-:3.31, AB_AveWR:57.1", "to": "Slash of Light", "value": 3.31}, {"from": "Adelbert Steiner", "label": "3.37", "title": "combo_ct:5354, comboWR:61.92, combo+-:3.37, AB_AveWR:58.55", "to": "White Auracite", "value": 3.37}, {"from": "Adelbert Steiner", "label": "4.77", "title": "combo_ct:6377, comboWR:62.57, combo+-:4.77, AB_AveWR:57.8", "to": "White Mage\u0027s Staff", "value": 4.77}, {"from": "Adelbert Steiner", "label": "3.71", "title": "combo_ct:656, comboWR:63.26, combo+-:3.71, AB_AveWR:59.55", "to": "Choco-Comet", "value": 3.71}, {"from": "Adelbert Steiner", "label": "3.42", "title": "combo_ct:719, comboWR:59.67, combo+-:3.42, AB_AveWR:56.25", "to": "Coral Sword", "value": 3.42}, {"from": "Adelbert Steiner", "label": "6.37", "title": "combo_ct:1196, comboWR:65.47, combo+-:6.37, AB_AveWR:59.1", "to": "Samurai\u0027s Katana", "value": 6.37}, {"from": "Adelbert Steiner", "label": "4.02", "title": "combo_ct:1219, comboWR:62.02, combo+-:4.02, AB_AveWR:58.0", "to": "Zidane, Tantalus Thief", "value": 4.02}, {"from": "Delivery Moogle", "label": "3.65", "title": "combo_ct:2613, comboWR:62.5, combo+-:3.65, AB_AveWR:58.85", "to": "Battle Menu", "value": 3.65}, {"from": "Delivery Moogle", "label": "4.42", "title": "combo_ct:5611, comboWR:62.32, combo+-:4.42, AB_AveWR:57.9", "to": "Gaelicat", "value": 4.42}, {"from": "Delivery Moogle", "label": "3.36", "title": "combo_ct:5341, comboWR:62.01, combo+-:3.36, AB_AveWR:58.65", "to": "Magitek Infantry", "value": 3.36}, {"from": "Delivery Moogle", "label": "4.22", "title": "combo_ct:1496, comboWR:62.37, combo+-:4.22, AB_AveWR:58.15", "to": "Restoration Magic", "value": 4.22}, {"from": "Delivery Moogle", "label": "4.7", "title": "combo_ct:5227, comboWR:62.6, combo+-:4.7, AB_AveWR:57.9", "to": "Slash of Light", "value": 4.7}, {"from": "Delivery Moogle", "label": "3.79", "title": "combo_ct:6349, comboWR:63.14, combo+-:3.79, AB_AveWR:59.35", "to": "White Auracite", "value": 3.79}, {"from": "Delivery Moogle", "label": "3.31", "title": "combo_ct:6987, comboWR:61.91, combo+-:3.31, AB_AveWR:58.6", "to": "White Mage\u0027s Staff", "value": 3.31}, {"from": "Delivery Moogle", "label": "3.11", "title": "combo_ct:3107, comboWR:60.86, combo+-:3.11, AB_AveWR:57.75", "to": "You\u0027re Not Alone", "value": 3.11}, {"from": "Delivery Moogle", "label": "3.39", "title": "combo_ct:2312, comboWR:61.89, combo+-:3.39, AB_AveWR:58.5", "to": "Zack Fair", "value": 3.39}, {"from": "Delivery Moogle", "label": "4.09", "title": "combo_ct:585, comboWR:64.44, combo+-:4.09, AB_AveWR:60.35", "to": "Choco-Comet", "value": 4.09}, {"from": "Delivery Moogle", "label": "5.04", "title": "combo_ct:1021, comboWR:64.94, combo+-:5.04, AB_AveWR:59.9", "to": "Samurai\u0027s Katana", "value": 5.04}, {"from": "Delivery Moogle", "label": "3.7", "title": "combo_ct:1472, comboWR:62.7, combo+-:3.7, AB_AveWR:59.0", "to": "Thunder Magic", "value": 3.7}, {"from": "Delivery Moogle", "label": "3.74", "title": "combo_ct:1437, comboWR:61.59, combo+-:3.74, AB_AveWR:57.85", "to": "Giott, King of the Dwarves", "value": 3.74}, {"from": "Delivery Moogle", "label": "3.12", "title": "combo_ct:1179, comboWR:61.92, combo+-:3.12, AB_AveWR:58.8", "to": "Zidane, Tantalus Thief", "value": 3.12}, {"from": "Dragoon\u0027s Lance", "label": "3.37", "title": "combo_ct:2499, comboWR:62.22, combo+-:3.37, AB_AveWR:58.85", "to": "Ambrosia Whiteheart", "value": 3.37}, {"from": "Dragoon\u0027s Lance", "label": "3.04", "title": "combo_ct:1774, comboWR:60.99, combo+-:3.04, AB_AveWR:57.95", "to": "Ashe, Princess of Dalmasca", "value": 3.04}, {"from": "Dragoon\u0027s Lance", "label": "4.4", "title": "combo_ct:5869, comboWR:63.2, combo+-:4.4, AB_AveWR:58.8", "to": "Gaelicat", "value": 4.4}, {"from": "Dragoon\u0027s Lance", "label": "3.7", "title": "combo_ct:2715, comboWR:62.95, combo+-:3.7, AB_AveWR:59.25", "to": "Magitek Armor", "value": 3.7}, {"from": "Dragoon\u0027s Lance", "label": "3.52", "title": "combo_ct:5167, comboWR:63.07, combo+-:3.52, AB_AveWR:59.55", "to": "Magitek Infantry", "value": 3.52}, {"from": "Dragoon\u0027s Lance", "label": "3.64", "title": "combo_ct:1434, comboWR:62.69, combo+-:3.64, AB_AveWR:59.05", "to": "Restoration Magic", "value": 3.64}, {"from": "Dragoon\u0027s Lance", "label": "5.71", "title": "combo_ct:5908, comboWR:64.51, combo+-:5.71, AB_AveWR:58.8", "to": "Slash of Light", "value": 5.71}, {"from": "Dragoon\u0027s Lance", "label": "3.62", "title": "combo_ct:5499, comboWR:61.97, combo+-:3.62, AB_AveWR:58.35", "to": "Weapons Vendor", "value": 3.62}, {"from": "Dragoon\u0027s Lance", "label": "4.42", "title": "combo_ct:6672, comboWR:64.67, combo+-:4.42, AB_AveWR:60.25", "to": "White Auracite", "value": 4.42}, {"from": "Dragoon\u0027s Lance", "label": "3.25", "title": "combo_ct:6746, comboWR:62.75, combo+-:3.25, AB_AveWR:59.5", "to": "White Mage\u0027s Staff", "value": 3.25}, {"from": "Dragoon\u0027s Lance", "label": "3.41", "title": "combo_ct:3653, comboWR:62.06, combo+-:3.41, AB_AveWR:58.65", "to": "You\u0027re Not Alone", "value": 3.41}, {"from": "Dragoon\u0027s Lance", "label": "4.02", "title": "combo_ct:2430, comboWR:63.42, combo+-:4.02, AB_AveWR:59.4", "to": "Zack Fair", "value": 4.02}, {"from": "Dragoon\u0027s Lance", "label": "6.17", "title": "combo_ct:588, comboWR:64.12, combo+-:6.17, AB_AveWR:57.95", "to": "Coral Sword", "value": 6.17}, {"from": "Dragoon\u0027s Lance", "label": "8.48", "title": "combo_ct:892, comboWR:66.48, combo+-:8.48, AB_AveWR:58.0", "to": "Freya Crescent", "value": 8.48}, {"from": "Dragoon\u0027s Lance", "label": "3.76", "title": "combo_ct:1185, comboWR:60.76, combo+-:3.76, AB_AveWR:57.0", "to": "Item Shopkeep", "value": 3.76}, {"from": "Dragoon\u0027s Lance", "label": "8.11", "title": "combo_ct:1338, comboWR:68.91, combo+-:8.11, AB_AveWR:60.8", "to": "Samurai\u0027s Katana", "value": 8.11}, {"from": "Dragoon\u0027s Lance", "label": "4.29", "title": "combo_ct:1488, comboWR:63.24, combo+-:4.29, AB_AveWR:58.95", "to": "Suplex", "value": 4.29}, {"from": "Dragoon\u0027s Lance", "label": "4.23", "title": "combo_ct:1731, comboWR:62.28, combo+-:4.23, AB_AveWR:58.05", "to": "Warrior\u0027s Sword", "value": 4.23}, {"from": "Dragoon\u0027s Lance", "label": "4.52", "title": "combo_ct:1451, comboWR:63.27, combo+-:4.52, AB_AveWR:58.75", "to": "Giott, King of the Dwarves", "value": 4.52}, {"from": "Dragoon\u0027s Lance", "label": "3.82", "title": "combo_ct:1431, comboWR:63.52, combo+-:3.82, AB_AveWR:59.7", "to": "Zidane, Tantalus Thief", "value": 3.82}, {"from": "Paladin\u0027s Arms", "label": "3.2", "title": "combo_ct:2544, comboWR:57.35, combo+-:3.2, AB_AveWR:54.15", "to": "Item Shopkeep", "value": 3.2}, {"from": "Paladin\u0027s Arms", "label": "3.7", "title": "combo_ct:534, comboWR:58.05, combo+-:3.7, AB_AveWR:54.35", "to": "Opera Love Song", "value": 3.7}, {"from": "Paladin\u0027s Arms", "label": "3.57", "title": "combo_ct:2673, comboWR:60.42, combo+-:3.57, AB_AveWR:56.85", "to": "Zidane, Tantalus Thief", "value": 3.57}, {"from": "Restoration Magic", "label": "3.11", "title": "combo_ct:809, comboWR:58.71, combo+-:3.11, AB_AveWR:55.6", "to": "Ashe, Princess of Dalmasca", "value": 3.11}, {"from": "Restoration Magic", "label": "3.04", "title": "combo_ct:2263, comboWR:59.04, combo+-:3.04, AB_AveWR:56.0", "to": "Weapons Vendor", "value": 3.04}, {"from": "Restoration Magic", "label": "4.46", "title": "combo_ct:3366, comboWR:62.36, combo+-:4.46, AB_AveWR:57.9", "to": "White Auracite", "value": 4.46}, {"from": "Restoration Magic", "label": "4.59", "title": "combo_ct:579, comboWR:63.04, combo+-:4.59, AB_AveWR:58.45", "to": "Samurai\u0027s Katana", "value": 4.59}, {"from": "Restoration Magic", "label": "3.4", "title": "combo_ct:693, comboWR:60.75, combo+-:3.4, AB_AveWR:57.35", "to": "Zidane, Tantalus Thief", "value": 3.4}, {"from": "Slash of Light", "label": "3.05", "title": "combo_ct:12735, comboWR:59.95, combo+-:3.05, AB_AveWR:56.9", "to": "White Mage\u0027s Staff", "value": 3.05}, {"from": "Slash of Light", "label": "3.43", "title": "combo_ct:1715, comboWR:58.83, combo+-:3.43, AB_AveWR:55.4", "to": "Freya Crescent", "value": 3.43}, {"from": "Slash of Light", "label": "6.08", "title": "combo_ct:2248, comboWR:64.28, combo+-:6.08, AB_AveWR:58.2", "to": "Samurai\u0027s Katana", "value": 6.08}, {"from": "Slash of Light", "label": "3.55", "title": "combo_ct:3290, comboWR:59.0, combo+-:3.55, AB_AveWR:55.45", "to": "Warrior\u0027s Sword", "value": 3.55}, {"from": "Slash of Light", "label": "3.28", "title": "combo_ct:2677, comboWR:59.43, combo+-:3.28, AB_AveWR:56.15", "to": "Giott, King of the Dwarves", "value": 3.28}, {"from": "White Auracite", "label": "3.58", "title": "combo_ct:5398, comboWR:61.28, combo+-:3.58, AB_AveWR:57.7", "to": "Ambrosia Whiteheart", "value": 3.58}, {"from": "White Auracite", "label": "3.83", "title": "combo_ct:11964, comboWR:61.48, combo+-:3.83, AB_AveWR:57.65", "to": "Gaelicat", "value": 3.83}, {"from": "White Auracite", "label": "3.07", "title": "combo_ct:5781, comboWR:61.17, combo+-:3.07, AB_AveWR:58.1", "to": "Magitek Armor", "value": 3.07}, {"from": "White Auracite", "label": "3.29", "title": "combo_ct:14817, comboWR:61.64, combo+-:3.29, AB_AveWR:58.35", "to": "White Mage\u0027s Staff", "value": 3.29}, {"from": "White Auracite", "label": "4.42", "title": "combo_ct:2107, comboWR:64.07, combo+-:4.42, AB_AveWR:59.65", "to": "Samurai\u0027s Katana", "value": 4.42}, {"from": "White Mage\u0027s Staff", "label": "4.43", "title": "combo_ct:2476, comboWR:63.33, combo+-:4.43, AB_AveWR:58.9", "to": "Samurai\u0027s Katana", "value": 4.43}, {"from": "Choco-Comet", "label": "3.42", "title": "combo_ct:557, comboWR:63.02, combo+-:3.42, AB_AveWR:59.6", "to": "Battle Menu", "value": 3.42}, {"from": "Choco-Comet", "label": "5.53", "title": "combo_ct:4510, comboWR:64.43, combo+-:5.53, AB_AveWR:58.9", "to": "Blazing Bomb", "value": 5.53}, {"from": "Choco-Comet", "label": "5.35", "title": "combo_ct:6829, comboWR:64.5, combo+-:5.35, AB_AveWR:59.15", "to": "Call the Mountain Chocobo", "value": 5.35}, {"from": "Choco-Comet", "label": "3.78", "title": "combo_ct:2085, comboWR:62.93, combo+-:3.78, AB_AveWR:59.15", "to": "Fire Magic", "value": 3.78}, {"from": "Choco-Comet", "label": "3.05", "title": "combo_ct:977, comboWR:60.9, combo+-:3.05, AB_AveWR:57.85", "to": "Freya Crescent", "value": 3.05}, {"from": "Choco-Comet", "label": "3.54", "title": "combo_ct:2313, comboWR:60.74, combo+-:3.54, AB_AveWR:57.2", "to": "Laughing Mad", "value": 3.54}, {"from": "Choco-Comet", "label": "4.1", "title": "combo_ct:3711, comboWR:61.2, combo+-:4.1, AB_AveWR:57.1", "to": "Light of Judgment", "value": 4.1}, {"from": "Choco-Comet", "label": "3.6", "title": "combo_ct:3088, comboWR:60.2, combo+-:3.6, AB_AveWR:56.6", "to": "Mysidian Elder", "value": 3.6}, {"from": "Choco-Comet", "label": "4.17", "title": "combo_ct:2517, comboWR:62.77, combo+-:4.17, AB_AveWR:58.6", "to": "Prompto Argentum", "value": 4.17}, {"from": "Choco-Comet", "label": "3.58", "title": "combo_ct:1558, comboWR:60.33, combo+-:3.58, AB_AveWR:56.75", "to": "Queen Brahne", "value": 3.58}, {"from": "Choco-Comet", "label": "4.03", "title": "combo_ct:3092, comboWR:64.68, combo+-:4.03, AB_AveWR:60.65", "to": "Samurai\u0027s Katana", "value": 4.03}, {"from": "Choco-Comet", "label": "6.8", "title": "combo_ct:2121, comboWR:66.15, combo+-:6.8, AB_AveWR:59.35", "to": "Sorceress\u0027s Schemes", "value": 6.8}, {"from": "Choco-Comet", "label": "3.79", "title": "combo_ct:6742, comboWR:62.59, combo+-:3.79, AB_AveWR:58.8", "to": "Suplex", "value": 3.79}, {"from": "Choco-Comet", "label": "4.69", "title": "combo_ct:7796, comboWR:64.44, combo+-:4.69, AB_AveWR:59.75", "to": "Thunder Magic", "value": 4.69}, {"from": "Choco-Comet", "label": "3.72", "title": "combo_ct:1078, comboWR:63.27, combo+-:3.72, AB_AveWR:59.55", "to": "Zidane, Tantalus Thief", "value": 3.72}, {"from": "Coral Sword", "label": "6.02", "title": "combo_ct:1152, comboWR:63.37, combo+-:6.02, AB_AveWR:57.35", "to": "Samurai\u0027s Katana", "value": 6.02}, {"from": "Samurai\u0027s Katana", "label": "5.31", "title": "combo_ct:837, comboWR:63.56, combo+-:5.31, AB_AveWR:58.25", "to": "Ambrosia Whiteheart", "value": 5.31}, {"from": "Samurai\u0027s Katana", "label": "6.96", "title": "combo_ct:959, comboWR:66.11, combo+-:6.96, AB_AveWR:59.15", "to": "Battle Menu", "value": 6.96}, {"from": "Samurai\u0027s Katana", "label": "4.44", "title": "combo_ct:2029, comboWR:62.64, combo+-:4.44, AB_AveWR:58.2", "to": "Gaelicat", "value": 4.44}, {"from": "Samurai\u0027s Katana", "label": "3.82", "title": "combo_ct:1864, comboWR:62.77, combo+-:3.82, AB_AveWR:58.95", "to": "Magitek Infantry", "value": 3.82}, {"from": "Samurai\u0027s Katana", "label": "6.6", "title": "combo_ct:2631, comboWR:64.35, combo+-:6.6, AB_AveWR:57.75", "to": "Weapons Vendor", "value": 6.6}, {"from": "Samurai\u0027s Katana", "label": "5.76", "title": "combo_ct:1586, comboWR:63.81, combo+-:5.76, AB_AveWR:58.05", "to": "You\u0027re Not Alone", "value": 5.76}, {"from": "Samurai\u0027s Katana", "label": "6.15", "title": "combo_ct:993, comboWR:64.95, combo+-:6.15, AB_AveWR:58.8", "to": "Zack Fair", "value": 6.15}, {"from": "Samurai\u0027s Katana", "label": "3.99", "title": "combo_ct:950, comboWR:59.79, combo+-:3.99, AB_AveWR:55.8", "to": "Barret Wallace", "value": 3.99}, {"from": "Samurai\u0027s Katana", "label": "3.37", "title": "combo_ct:1400, comboWR:62.07, combo+-:3.37, AB_AveWR:58.7", "to": "Fire Magic", "value": 3.37}, {"from": "Samurai\u0027s Katana", "label": "7.72", "title": "combo_ct:1680, comboWR:65.12, combo+-:7.72, AB_AveWR:57.4", "to": "Freya Crescent", "value": 7.72}, {"from": "Samurai\u0027s Katana", "label": "3.56", "title": "combo_ct:2475, comboWR:59.96, combo+-:3.56, AB_AveWR:56.4", "to": "Item Shopkeep", "value": 3.56}, {"from": "Samurai\u0027s Katana", "label": "3.76", "title": "combo_ct:5841, comboWR:62.11, combo+-:3.76, AB_AveWR:58.35", "to": "Suplex", "value": 3.76}, {"from": "Samurai\u0027s Katana", "label": "4.27", "title": "combo_ct:6766, comboWR:63.57, combo+-:4.27, AB_AveWR:59.3", "to": "Thunder Magic", "value": 4.27}, {"from": "Samurai\u0027s Katana", "label": "7.37", "title": "combo_ct:1749, comboWR:65.52, combo+-:7.37, AB_AveWR:58.15", "to": "Giott, King of the Dwarves", "value": 7.37}, {"from": "Samurai\u0027s Katana", "label": "6.81", "title": "combo_ct:1716, comboWR:65.91, combo+-:6.81, AB_AveWR:59.1", "to": "Zidane, Tantalus Thief", "value": 6.81}, {"from": "Zidane, Tantalus Thief", "label": "4.64", "title": "combo_ct:1052, comboWR:61.79, combo+-:4.64, AB_AveWR:57.15", "to": "Ambrosia Whiteheart", "value": 4.64}, {"from": "Zidane, Tantalus Thief", "label": "3.83", "title": "combo_ct:1136, comboWR:61.88, combo+-:3.83, AB_AveWR:58.05", "to": "Battle Menu", "value": 3.83}, {"from": "Zidane, Tantalus Thief", "label": "3.14", "title": "combo_ct:870, comboWR:60.69, combo+-:3.14, AB_AveWR:57.55", "to": "Magitek Armor", "value": 3.14}, {"from": "Zidane, Tantalus Thief", "label": "3.39", "title": "combo_ct:1159, comboWR:61.09, combo+-:3.39, AB_AveWR:57.7", "to": "Zack Fair", "value": 3.39}, {"from": "Battle Menu", "label": "4.09", "title": "combo_ct:2116, comboWR:61.29, combo+-:4.09, AB_AveWR:57.2", "to": "Ambrosia Whiteheart", "value": 4.09}, {"from": "Battle Menu", "label": "3.16", "title": "combo_ct:4043, comboWR:59.86, combo+-:3.16, AB_AveWR:56.7", "to": "Weapons Vendor", "value": 3.16}, {"from": "Battle Menu", "label": "3.15", "title": "combo_ct:882, comboWR:58.5, combo+-:3.15, AB_AveWR:55.35", "to": "Item Shopkeep", "value": 3.15}, {"from": "Battle Menu", "label": "3.33", "title": "combo_ct:1356, comboWR:59.73, combo+-:3.33, AB_AveWR:56.4", "to": "Warrior\u0027s Sword", "value": 3.33}, {"from": "Battle Menu", "label": "4.99", "title": "combo_ct:1129, comboWR:62.09, combo+-:4.99, AB_AveWR:57.1", "to": "Giott, King of the Dwarves", "value": 4.99}, {"from": "Ambrosia Whiteheart", "label": "3.32", "title": "combo_ct:1913, comboWR:60.17, combo+-:3.32, AB_AveWR:56.85", "to": "Zack Fair", "value": 3.32}, {"from": "Warrior\u0027s Sword", "label": "3.55", "title": "combo_ct:2555, comboWR:58.2, combo+-:3.55, AB_AveWR:54.65", "to": "Freya Crescent", "value": 3.55}, {"from": "Warrior\u0027s Sword", "label": "3.59", "title": "combo_ct:2126, comboWR:59.74, combo+-:3.59, AB_AveWR:56.15", "to": "Sorceress\u0027s Schemes", "value": 3.59}, {"from": "Magitek Infantry", "label": "3.18", "title": "combo_ct:5907, comboWR:59.98, combo+-:3.18, AB_AveWR:56.8", "to": "You\u0027re Not Alone", "value": 3.18}, {"from": "Magitek Infantry", "label": "3.09", "title": "combo_ct:2163, comboWR:60.19, combo+-:3.09, AB_AveWR:57.1", "to": "Suplex", "value": 3.09}, {"from": "Thunder Magic", "label": "4.57", "title": "combo_ct:13429, comboWR:62.37, combo+-:4.57, AB_AveWR:57.8", "to": "Call the Mountain Chocobo", "value": 4.57}, {"from": "Thunder Magic", "label": "3.96", "title": "combo_ct:4780, comboWR:59.81, combo+-:3.96, AB_AveWR:55.85", "to": "Laughing Mad", "value": 3.96}, {"from": "Thunder Magic", "label": "4.05", "title": "combo_ct:5488, comboWR:61.3, combo+-:4.05, AB_AveWR:57.25", "to": "Prompto Argentum", "value": 4.05}, {"from": "Thunder Magic", "label": "5.37", "title": "combo_ct:4406, comboWR:63.37, combo+-:5.37, AB_AveWR:58.0", "to": "Sorceress\u0027s Schemes", "value": 5.37}, {"from": "Suplex", "label": "3.76", "title": "combo_ct:11386, comboWR:60.61, combo+-:3.76, AB_AveWR:56.85", "to": "Call the Mountain Chocobo", "value": 3.76}, {"from": "Suplex", "label": "6.24", "title": "combo_ct:3340, comboWR:63.29, combo+-:6.24, AB_AveWR:57.05", "to": "Sorceress\u0027s Schemes", "value": 6.24}, {"from": "Opera Love Song", "label": "3.11", "title": "combo_ct:990, comboWR:55.66, combo+-:3.11, AB_AveWR:52.55", "to": "Mysidian Elder", "value": 3.11}, {"from": "Call the Mountain Chocobo", "label": "3.16", "title": "combo_ct:637, comboWR:57.46, combo+-:3.16, AB_AveWR:54.3", "to": "Barret Wallace", "value": 3.16}, {"from": "Call the Mountain Chocobo", "label": "4.35", "title": "combo_ct:8958, comboWR:61.3, combo+-:4.35, AB_AveWR:56.95", "to": "Blazing Bomb", "value": 4.35}, {"from": "Call the Mountain Chocobo", "label": "4.6", "title": "combo_ct:3809, comboWR:61.8, combo+-:4.6, AB_AveWR:57.2", "to": "Fire Magic", "value": 4.6}, {"from": "Call the Mountain Chocobo", "label": "3.98", "title": "combo_ct:7358, comboWR:59.13, combo+-:3.98, AB_AveWR:55.15", "to": "Light of Judgment", "value": 3.98}, {"from": "Call the Mountain Chocobo", "label": "3.01", "title": "combo_ct:5364, comboWR:57.66, combo+-:3.01, AB_AveWR:54.65", "to": "Mysidian Elder", "value": 3.01}, {"from": "Call the Mountain Chocobo", "label": "3.96", "title": "combo_ct:4689, comboWR:60.61, combo+-:3.96, AB_AveWR:56.65", "to": "Prompto Argentum", "value": 3.96}, {"from": "Call the Mountain Chocobo", "label": "3.71", "title": "combo_ct:3937, comboWR:61.11, combo+-:3.71, AB_AveWR:57.4", "to": "Sorceress\u0027s Schemes", "value": 3.71}, {"from": "Blazing Bomb", "label": "4.54", "title": "combo_ct:3451, comboWR:61.69, combo+-:4.54, AB_AveWR:57.15", "to": "Sorceress\u0027s Schemes", "value": 4.54}, {"from": "Sorceress\u0027s Schemes", "label": "6.6", "title": "combo_ct:1539, comboWR:64.0, combo+-:6.6, AB_AveWR:57.4", "to": "Fire Magic", "value": 6.6}, {"from": "Sorceress\u0027s Schemes", "label": "3.69", "title": "combo_ct:2263, comboWR:59.04, combo+-:3.69, AB_AveWR:55.35", "to": "Light of Judgment", "value": 3.69}, {"from": "Sorceress\u0027s Schemes", "label": "3.95", "title": "combo_ct:1830, comboWR:58.8, combo+-:3.95, AB_AveWR:54.85", "to": "Mysidian Elder", "value": 3.95}, {"from": "Sorceress\u0027s Schemes", "label": "5.85", "title": "combo_ct:1410, comboWR:62.7, combo+-:5.85, AB_AveWR:56.85", "to": "Prompto Argentum", "value": 5.85}, {"from": "Sorceress\u0027s Schemes", "label": "4.09", "title": "combo_ct:836, comboWR:59.09, combo+-:4.09, AB_AveWR:55.0", "to": "Queen Brahne", "value": 4.09}, {"from": "Fire Magic", "label": "3.6", "title": "combo_ct:1492, comboWR:60.25, combo+-:3.6, AB_AveWR:56.65", "to": "Prompto Argentum", "value": 3.6}, {"from": "Light of Judgment", "label": "3.21", "title": "combo_ct:3143, comboWR:57.81, combo+-:3.21, AB_AveWR:54.6", "to": "Prompto Argentum", "value": 3.21}, {"from": "Prompto Argentum", "label": "3.56", "title": "combo_ct:1823, comboWR:58.26, combo+-:3.56, AB_AveWR:54.7", "to": "Laughing Mad", "value": 3.56}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"enabled": false}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
